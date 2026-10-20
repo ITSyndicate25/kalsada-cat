@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#191621" />
+    <meta
+      name="description"
+      content="Kalsada-Cat is a pixel arcade game about a black cat crossing a Filipino street full of jeepneys, fishballs, and sari-sari stores."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" href="/fonts/Silkscreen-Regular.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href="/fonts/Silkscreen-Bold.ttf" as="font" type="font/ttf" crossorigin />
+    <title>Kalsada-Cat · a Filipino street crossing arcade</title>
+  </head>
+  <body>
+    <div class="page">
+      <main class="stage" id="stage" data-phase="ready">
+        <canvas
+          id="game"
+          width="260"
+          height="420"
+          role="application"
+          tabindex="0"
+          aria-label="Kalsada-Cat. Move the cat with swipe gestures or arrow keys. Avoid jeepneys and collect fishballs."
+        ></canvas>
+
+        <header class="hud" id="hud">
+          <div class="hud-panel">
+            <span class="hud-label">SCORE</span>
+            <span class="hud-value" id="score">000</span>
+          </div>
+          <div class="hud-actions">
+            <button class="icon-btn" id="pauseBtn" type="button" aria-label="Pause game" title="Pause (P)">II</button>
+            <button
+              class="icon-btn icon-btn--wide"
+              id="soundBtn"
+              type="button"
+              aria-label="Toggle sound"
+              aria-pressed="true"
+              title="Sound (M)"
+            >
+              SFX
+            </button>
+          </div>
+          <div class="hud-panel hud-panel--right">
+            <span class="hud-label">BEST</span>
+            <span class="hud-value" id="best">000</span>
+          </div>
+        </header>
+
+        <div class="power-badge" id="powerBadge" hidden>
+          <span class="power-dot" aria-hidden="true"></span>
+          SWERTE
+        </div>
+
+        <section class="screen screen--start" id="startScreen" aria-labelledby="gameTitle" role="dialog" aria-modal="true">
+          <div class="hero">
+            <p class="eyebrow">MABUHAY, MINGMING</p>
+            <h1 class="title" id="gameTitle">
+              <span class="title-kalsada">KALSADA</span>
+              <span class="title-cat">CAT</span>
+            </h1>
+            <p class="tagline">Tumawid ka. Iwasan ang jeepney.<br />Hanapin ang fishball.</p>
+          </div>
+
+          <div class="card start-card">
+            <div class="stat-line">
+              <span class="hud-label">BEST</span>
+              <strong id="startBest">000</strong>
+            </div>
+            <button class="btn" id="startBtn" type="button">START</button>
+            <p class="keys">
+              <span>MOVE</span> SWIPE / ARROWS<br />
+              <span>HOP</span> TAP / UP
+            </p>
+          </div>
+        </section>
+
+        <section class="screen screen--pause" id="pauseScreen" aria-labelledby="pauseTitle" role="dialog" aria-modal="true" hidden>
+          <div class="card pause-card">
+            <p class="eyebrow">HINTO MUNA</p>
+            <h2 class="card-title" id="pauseTitle">PAUSED</h2>
+            <button class="btn" id="resumeBtn" type="button">RESUME</button>
+            <button class="btn btn--ghost" id="restartBtn" type="button">RESTART</button>
+            <button class="btn btn--ghost" id="quitBtn" type="button">QUIT</button>
+          </div>
+        </section>
+
+        <section class="screen screen--over" id="overScreen" aria-labelledby="overTitle" role="dialog" aria-modal="true" hidden>
+          <div class="hero hero--over">
+            <p class="eyebrow">SAKIT AH</p>
+            <h2 class="crash-title" id="overTitle">BANGGA!</h2>
+            <p class="tagline">The jeepney always wins.</p>
+          </div>
+          <div class="card result-card">
+            <div class="result-grid">
+              <div class="stat-block">
+                <span class="hud-label">SCORE</span>
+                <strong id="finalScore">000</strong>
+              </div>
+              <div class="stat-block stat-block--right">
+                <span class="hud-label">BEST</span>
+                <strong id="finalBest">000</strong>
+              </div>
+            </div>
+            <p class="record" id="recordLine" hidden>NEW RECORD!</p>
+            <button class="btn" id="retryBtn" type="button">ULIT</button>
+            <button class="btn btn--ghost" id="homeBtn" type="button">START SCREEN</button>
+          </div>
+        </section>
+
+        <div class="sr-only" id="announcer" aria-live="polite"></div>
+      </main>
+
+      <footer class="page-foot">
+        <span><kbd>ARROWS</kbd> / <kbd>WASD</kbd> move</span>
+        <span><kbd>P</kbd> pause</span>
+        <span><kbd>M</kbd> sound</span>
+      </footer>
+    </div>
+
+    <noscript>
+      <p class="noscript">Kalsada-Cat needs JavaScript to run. Please enable it and refresh.</p>
+    </noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
