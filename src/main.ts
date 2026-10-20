@@ -252,6 +252,11 @@ for (const button of languageButtons) {
     audio.unlock();
     audio.play('click');
     applyLanguage(next);
+
+    if (engine.phase === 'ready') startBtn.focus({ preventScroll: true });
+    else if (engine.phase === 'paused') resumeBtn.focus({ preventScroll: true });
+    else if (engine.phase === 'over') retryBtn.focus({ preventScroll: true });
+    else canvas.focus({ preventScroll: true });
   });
 }
 

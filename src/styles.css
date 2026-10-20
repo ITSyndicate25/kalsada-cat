@@ -432,6 +432,11 @@ button {
   font-weight: 700;
 }
 
+.keys .keys-value {
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
 .lang-switch {
   display: flex;
   flex-wrap: wrap;
