@@ -33,8 +33,8 @@ The game buffers one movement input while a hop finishes. Static props block the
 2. Hop one grid tile. Each hop lasts 115 ms; a tap always moves forward.
 3. Cross 2 to 5 lanes, then use the next sidewalk island to reset.
 4. Route around the props on the island. Every island keeps one column fully clear, but that column moves from island to island.
-5. Collect fishballs (+5), kikiam (+10), or an anting-anting charm (one-hit shield). An extra anting while shielded converts to +15 points.
-6. Score one point for every new farthest row and keep moving. A jeepney, tricycle, or bus hit ends the run unless a shield is active. The run is endless.
+5. Collect fishballs (+5), kikiam (+10), or an anting-anting charm (+1 shield). Shields stack without a cap; each hit consumes one.
+6. Score one point for every new farthest row and keep moving. A jeepney, tricycle, or bus hit consumes one shield; a hit with no shields ends the run. The run is endless.
 
 ## Scoring and difficulty
 
@@ -43,12 +43,12 @@ The game buffers one movement input while a hop finishes. Static props block the
 | Reach a new farthest row | +1 |
 | Fishball | +5 |
 | Kikiam | +10 |
-| Anting-anting | Shield absorbs one vehicle hit; +15 if already shielded |
+| Anting-anting | Adds one shield charge; charges stack without a cap |
 | Revisit an earlier row | No score |
 
 Traffic starts with two-lane roads. The generator raises lane count to three, four, and finally five. It also raises speed, tightens gaps, and introduces tricycles after roughly 16 rows and buses after roughly 55 rows. Early roads are the tutorial.
 
-Each road uses the same vehicle type in a lane so speeds stay coherent. A lane's vehicles move in one direction and wrap behind the rear-most vehicle, which preserves spacing. The camera eases toward the cat, while rows generate ahead of the view.
+Each road uses the same vehicle type in a lane so speeds stay coherent. A lane's vehicles move in one direction and wrap behind the rear-most vehicle, which preserves spacing. Re-entering vehicles always start fully outside the stage, and every generated row advances, so vehicles cannot appear in the middle of a road when the camera reaches them. The camera eases toward the cat, while rows generate ahead of the view.
 
 ## Game state logic
 
@@ -73,7 +73,7 @@ stateDiagram-v2
 | Dying | Traffic freezes for impact, the screen shakes, and the cat shows hit marks. Input is ignored. |
 | Over | Final score card, record badge, retry, and start-screen actions. Traffic keeps moving behind the overlay. |
 
-A new run creates a fresh world, places the cat at the starting sidewalk, resets score and shield, and starts input immediately. The best score survives runs.
+A new run creates a fresh world, places the cat at the starting sidewalk, resets score and shields, and starts input immediately. The best score survives runs.
 
 High scores live in `localStorage` under `kalsada-cat.best.v1`. The engine loads the value before the first frame, updates the live best as points land, and the UI persists a new record immediately. `NEW RECORD!` compares the final score against the best score at the start of that run, not against the live value the run already raised.
 
@@ -83,13 +83,23 @@ The game pauses when the document becomes hidden. The pause overlay stays up whe
 
 All sprites are drawn at runtime on a 260x420 canvas and scaled with nearest-neighbor rendering.
 
+- The street rotates through four districts. Each has its own road tone, curb, lane paint, ground marks, and prop mix:
+
+| District | Surface | Street furniture |
+| --- | --- | --- |
+| Barangay | Cool gray concrete with expansion joints, weeds, and drain grates | Sari-sari stores, monobloc chairs, plants, trash bags, no-crossing signs |
+| Palengke | Terracotta tile with produce specks, stains, and patched asphalt | Fruit crates, fishball carts, stores, chairs, signs |
+| City | Blue-gray pavers with utility covers and crisp lane paint | Signs, planters, stores, chairs, trash bags |
+| Baywalk | Weathered boardwalk planks with salt marks and green-gray curbs | Painted benches, plants, carts, trash bags |
+
 - Three sari-sari store variants share the sidewalk: **SARI-SARI**, **TINDAHAN**, and **KARINDERYA**, with different awnings, signs, and walls.
 - Fishball carts come in three umbrella palettes. Glass cabinets hold fishball skewers; a vendor stands behind the cart.
-- Street furniture includes blue and pink monobloc chairs, tied trash bags, potted plants, and no-crossing signs.
+- Street furniture includes blue and pink monobloc chairs, tied trash bags, potted plants, no-crossing signs, wooden produce crates, and painted benches.
 - Wooden utility poles carry transformers and three sagging wires across the road. Wires draw behind the cat so play stays readable.
-- Jeepneys use five color schemes, roof cargo, decorated side panels, and chrome trim. Tricycles are short and quick; buses are long and slow.
-- Road surfaces use dashed white lane lines, dashed yellow direction-change lines, yellow curbs, sidewalk pavers, drains, and manhole covers.
-- The cat has two tail frames, a hop arc, dust particles, impact shakes, a golden shield aura, and a small death overlay.
+- Jeepneys use twelve color schemes and three decoration styles. Roof cargo, chrome trim, side checks, and accent stripes change per vehicle.
+- Tricycles and buses use the same twelve palettes plus their own variants. Tricycles add roof cargo or a pennant and side stripe; buses add roof luggage or a lower livery band.
+- Road surfaces use theme-specific asphalt tones, dashed lane lines, direction-change paint, curbs, sidewalk pavers, drains, and manhole covers.
+- The 16x16 cat has two tail frames, a hop arc, dust particles, impact shakes, a golden shield aura, and a small death overlay.
 
 ## Additional obstacle and power-up ideas
 
@@ -111,7 +121,7 @@ These are designed extensions, not features in the current build.
 | Idea | Behavior |
 | --- | --- |
 | Traffic enforcer whistle | Freezes every vehicle for four seconds. Rare; spawns after 40 rows. |
-| Payong (umbrella) | Adds a second shield layer. The cat carries a visible canopy. |
+| Payong (umbrella) | Adds two shield charges and a visible canopy. Rare; spawns after 40 rows. |
 | Tsinelas (slipper) | Doubles hop speed for six seconds. The input buffer still applies. |
 | Halo-halo | Doubles all points for ten seconds. Pickups and distance both count. |
 | Balut | Revives once at the crash tile with two seconds of invulnerability. Single use per run. |
@@ -133,7 +143,7 @@ Balance rules for any of these: do not spawn in the first 20 rows, cap one power
 | `src/ui/storage.ts` | Local best score and sound preference |
 | `src/main.ts` | Canvas bootstrap, HUD, screens, keyboard, swipe, pause, and animation loop |
 | `src/styles.css` | Responsive frame, pixel panels, overlays, and controls |
-| `tests/game.test.ts` | World invariants, traffic spacing, scoring, pickups, collisions, shield behavior |
+| `tests/game.test.ts` | World invariants, district coverage, traffic spacing and wraps, scoring, pickups, collisions, shield stacks |
 
 ## Test and verify
 
@@ -146,12 +156,15 @@ npm run build
 The test suite covers:
 
 - Sidewalk blocks always expose at least one fully clear column.
+- All four districts appear as the world grows.
 - Lanes contain spaced vehicles before and after repeated wrap cycles.
+- Wrapped vehicles re-enter only from outside the stage.
+- Traffic in rows ahead of the camera keeps moving.
 - Pickups never overlap blocking props.
 - Distance scoring, live best updates, and pause freezing.
 - Fishball collection and bonus scoring.
 - Game over, record reporting, and the transition after hit-stop.
-- Shield consumption and the following fatal hit.
+- A shield stack absorbs one hit per charge; a hit at zero ends the run.
 
 ## Deploy to Vercel
 
