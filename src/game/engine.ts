@@ -84,7 +84,7 @@ export class Engine {
   camera = 0;
   score = 0;
   best = 0;
-  shield = false;
+  shields = 0;
   invuln = 0;
   time = 0;
   shake = 0;
@@ -115,7 +115,7 @@ export class Engine {
     this.score = 0;
     this.maxRow = START_ROW;
     this.camera = 0;
-    this.shield = false;
+    this.shields = 0;
     this.invuln = 0;
     this.queued = null;
     this.deathTimer = 0;
@@ -135,7 +135,7 @@ export class Engine {
     this.score = 0;
     this.maxRow = START_ROW;
     this.camera = 0;
-    this.shield = false;
+    this.shields = 0;
     this.invuln = 0;
     this.queued = null;
     this.deathTimer = 0;
@@ -176,8 +176,8 @@ export class Engine {
     }
 
     if (this.phase !== 'dying') {
-      const from = Math.max(0, Math.floor(this.camera) - 3);
-      const to = Math.floor(this.camera) + VIEW_ROWS + 3;
+      const from = Math.max(0, Math.floor(this.camera) - 12);
+      const to = this.world.rows.length - 1;
       this.world.updateTraffic(dt, from, to);
     }
 
@@ -285,21 +285,16 @@ export class Engine {
     if (!pickup) return;
 
     if (pickup.kind === 'anting') {
-      if (this.shield) {
-        this.award(15);
-        this.popups.push({
-          x: pickup.col + 0.5,
-          y: pickup.row + 0.75,
-          text: '+15',
-          life: 0.8,
-          maxLife: 0.8,
-        });
-        this.events.push({ type: 'pickup', kind: pickup.kind, bonus: 15 });
-      } else {
-        this.shield = true;
-        this.spawnBurst(pickup.row + 0.5, 0.55, ['#ffd23f', '#fff3c4', '#e8553e'], 8, 0.5);
-        this.events.push({ type: 'pickup', kind: pickup.kind, bonus: 0 });
-      }
+      this.shields += 1;
+      this.popups.push({
+        x: pickup.col + 0.5,
+        y: pickup.row + 0.75,
+        text: 'SHIELD',
+        life: 0.8,
+        maxLife: 0.8,
+      });
+      this.spawnBurst(pickup.row + 0.5, 0.55, ['#ffd23f', '#fff3c4', '#e8553e'], 8, 0.5);
+      this.events.push({ type: 'pickup', kind: pickup.kind, bonus: 0 });
       return;
     }
 
@@ -343,8 +338,8 @@ export class Engine {
         if (!overlaps(cat, car)) continue;
 
         if (this.invuln > 0) return;
-        if (this.shield) {
-          this.shield = false;
+        if (this.shields > 0) {
+          this.shields -= 1;
           this.invuln = 1.5;
           this.flash = 0.22;
           this.shake = 0.18;

@@ -10,7 +10,8 @@ export const START_ROW = 1;
 
 export type RowKind = 'road' | 'sidewalk';
 export type VehicleKind = 'jeepney' | 'tricycle' | 'bus';
-export type PropKind = 'store' | 'cart' | 'chairs' | 'trash' | 'plant' | 'sign' | 'pole';
+export type SceneTheme = 'barangay' | 'palengke' | 'city' | 'baywalk';
+export type PropKind = 'store' | 'cart' | 'chairs' | 'trash' | 'plant' | 'sign' | 'pole' | 'crates' | 'bench';
 export type PickupKind = 'fishball' | 'kikiam' | 'anting';
 
 export const VEHICLE_WIDTH: Record<VehicleKind, number> = {
@@ -18,6 +19,8 @@ export const VEHICLE_WIDTH: Record<VehicleKind, number> = {
   tricycle: 32,
   bus: 76,
 };
+
+export const VEHICLE_VARIANTS = 12;
 
 export const PROP_WIDTH: Record<PropKind, number> = {
   store: 3,
@@ -27,6 +30,18 @@ export const PROP_WIDTH: Record<PropKind, number> = {
   plant: 1,
   sign: 1,
   pole: 1,
+  crates: 1,
+  bench: 2,
+};
+
+export const SCENE_ORDER: readonly SceneTheme[] = ['barangay', 'palengke', 'city', 'baywalk'];
+
+const THEME_PROPS: Readonly<Record<SceneTheme, readonly PropKind[]>> = {
+  barangay: ['chairs', 'trash', 'plant', 'sign'],
+  // Duplicate entries weight the mix; the palengke leans on produce crates.
+  palengke: ['crates', 'crates', 'chairs', 'trash', 'sign'],
+  city: ['sign', 'plant', 'trash', 'chairs'],
+  baywalk: ['bench', 'plant', 'trash', 'chairs'],
 };
 
 export const PICKUP_BONUS: Record<PickupKind, number> = {
@@ -67,6 +82,7 @@ const tileKey = (col: number, row: number): string => `${col},${row}`;
 
 export class World {
   readonly rows: RowKind[] = [];
+  readonly themes: SceneTheme[] = [];
   readonly lanes = new Map<number, Lane>();
   readonly props: Prop[] = [];
   readonly pickups: Pickup[] = [];
@@ -75,6 +91,8 @@ export class World {
   private readonly blocked = new Map<string, Prop>();
   private readonly pickupTiles = new Map<string, Pickup>();
   private readonly rng: Rng;
+  private scene: SceneTheme = 'barangay';
+  private roadBlocks = 0;
 
   constructor(rng: Rng) {
     this.rng = rng;
@@ -87,6 +105,10 @@ export class World {
 
   laneAt(row: number): Lane | undefined {
     return this.lanes.get(row);
+  }
+
+  themeAt(row: number): SceneTheme {
+    return this.themes[row] ?? 'barangay';
   }
 
   blockedAt(col: number, row: number): boolean {
@@ -134,20 +156,29 @@ export class World {
             if (other !== vehicle) rear = Math.min(rear, other.x);
           }
           const gap = randInt(this.rng, 42, 120);
-          vehicle.x = (Number.isFinite(rear) ? rear : STAGE_WIDTH) - vehicle.width - gap;
+          const entry = -vehicle.width - gap;
+          vehicle.x = Math.min(entry, rear - vehicle.width - gap);
         } else if (lane.dir < 0 && vehicle.x + vehicle.width < -buffer) {
           let front = Number.NEGATIVE_INFINITY;
           for (const other of lane.vehicles) {
             if (other !== vehicle) front = Math.max(front, other.x + other.width);
           }
           const gap = randInt(this.rng, 42, 120);
-          vehicle.x = (Number.isFinite(front) ? front : -buffer) + gap;
+          const entry = STAGE_WIDTH + gap;
+          vehicle.x = Math.max(entry, front + gap);
         }
       }
     }
   }
 
   private addRoadBlock(): void {
+    if (this.roadBlocks > 0 && this.roadBlocks % 3 === 0) {
+      const index = SCENE_ORDER.indexOf(this.scene);
+      this.scene = SCENE_ORDER[(index + 1) % SCENE_ORDER.length] ?? 'barangay';
+    }
+    this.roadBlocks += 1;
+
+    const scene = this.scene;
     const progress = this.rows.length;
     const difficulty = Math.min(1, progress / 280);
 
@@ -161,6 +192,7 @@ export class World {
       const dir: 1 | -1 = index === 0 ? previousDir : this.rng() < 0.62 ? (previousDir === 1 ? -1 : 1) : previousDir;
       previousDir = dir;
       this.rows.push('road');
+      this.themes.push(scene);
 
       const kind = this.pickVehicle(progress);
       const pace = kind === 'tricycle' ? 1.24 : kind === 'bus' ? 0.88 : 1;
@@ -194,7 +226,7 @@ export class World {
     while (x < STAGE_WIDTH + width) {
       lane.vehicles.push({
         kind,
-        variant: randInt(this.rng, 0, 4),
+        variant: randInt(this.rng, 0, VEHICLE_VARIANTS - 1),
         x,
         width,
       });
@@ -204,7 +236,11 @@ export class World {
 
   private addSidewalkBlock(size: number, initial: boolean): void {
     const start = this.rows.length;
-    for (let index = 0; index < size; index += 1) this.rows.push('sidewalk');
+    const scene = this.scene;
+    for (let index = 0; index < size; index += 1) {
+      this.rows.push('sidewalk');
+      this.themes.push(scene);
+    }
     const top = start + size - 1;
     const safeCol = initial ? START_COL : randInt(this.rng, 3, 9);
 
@@ -214,17 +250,19 @@ export class World {
       if (left && right) this.wireRows.add(top);
     }
 
-    if (this.rng() < (initial ? 0.9 : 0.78)) {
+    const storeChance = initial ? 0.9 : scene === 'palengke' ? 0.82 : scene === 'city' ? 0.55 : scene === 'baywalk' ? 0.48 : 0.78;
+    if (this.rng() < storeChance) {
       this.pickAndPlace('store', top, [0, 1, 2, 8, 9, 10], safeCol);
     }
 
+    const cartChance = scene === 'palengke' ? 0.86 : scene === 'city' ? 0.4 : scene === 'baywalk' ? 0.55 : 0.62;
     const middle = start + 1;
-    if (this.rng() < 0.62) {
+    if (this.rng() < cartChance) {
       this.pickAndPlace('cart', middle, [0, 1, 2, 3, 8, 9, 10, 11], safeCol);
     }
 
     const decorativeRows = initial ? [start, top] : [start, middle, top];
-    const smallProps: PropKind[] = ['chairs', 'trash', 'plant', 'sign'];
+    const smallProps = THEME_PROPS[scene];
     const propCount = randInt(this.rng, initial ? 1 : 2, initial ? 2 : 4);
     const sideColumns = [0, 1, 2, 3, 4, 8, 9, 10, 11, 12];
 
