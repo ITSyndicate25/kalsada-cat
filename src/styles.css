@@ -432,6 +432,54 @@ button {
   font-weight: 700;
 }
 
+.lang-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.lang-label {
+  color: var(--coral);
+  font-size: clamp(7px, 2.1cqw, 10px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lang-btn {
+  min-width: 40px;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 2px solid var(--ink);
+  background: var(--cream);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: clamp(8px, 2.4cqw, 11px);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  box-shadow: 2px 2px 0 var(--ink);
+  cursor: pointer;
+  appearance: none;
+}
+
+.lang-btn[aria-pressed='true'] {
+  background: var(--sun);
+}
+
+.lang-btn:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.lang-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
 .card-title {
   margin: 0;
   color: var(--ink);

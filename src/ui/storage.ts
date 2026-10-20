@@ -1,5 +1,8 @@
+import type { Language } from './i18n';
+
 const BEST_KEY = 'kalsada-cat.best.v1';
 const MUTED_KEY = 'kalsada-cat.muted.v1';
+const LANGUAGE_KEY = 'kalsada-cat.lang.v1';
 
 function read(key: string): string | null {
   try {
@@ -32,5 +35,18 @@ export function saveMuted(muted: boolean): void {
     window.localStorage.setItem(MUTED_KEY, muted ? '1' : '0');
   } catch {
     // Sound preference is non-critical.
+  }
+}
+
+export function loadLanguage(): Language | null {
+  const value = read(LANGUAGE_KEY);
+  return value === 'en' || value === 'fil' ? value : null;
+}
+
+export function saveLanguage(language: Language): void {
+  try {
+    window.localStorage.setItem(LANGUAGE_KEY, language);
+  } catch {
+    // Language is resettable; blocked storage must not stop the game.
   }
 }

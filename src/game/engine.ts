@@ -85,6 +85,8 @@ export class Engine {
   score = 0;
   best = 0;
   shields = 0;
+  /** Player-facing label for a collected shield; the shell localizes it. */
+  shieldPopup = 'SHIELD';
   invuln = 0;
   time = 0;
   shake = 0;
@@ -289,7 +291,7 @@ export class Engine {
       this.popups.push({
         x: pickup.col + 0.5,
         y: pickup.row + 0.75,
-        text: 'SHIELD',
+        text: this.shieldPopup,
         life: 0.8,
         maxLife: 0.8,
       });

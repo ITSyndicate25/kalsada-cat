@@ -2,7 +2,8 @@ import './styles.css';
 import { Engine, type Direction, type Phase } from './game/engine';
 import { Renderer } from './render/renderer';
 import { AudioBus } from './ui/audio';
-import { loadBest, loadMuted, saveBest, saveMuted } from './ui/storage';
+import { COPY, detectLanguage, formatGameOver, type Copy, type Language } from './ui/i18n';
+import { loadBest, loadLanguage, loadMuted, saveBest, saveLanguage, saveMuted } from './ui/storage';
 
 function element<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -32,6 +33,9 @@ const restartBtn = element<HTMLButtonElement>('restartBtn');
 const quitBtn = element<HTMLButtonElement>('quitBtn');
 const retryBtn = element<HTMLButtonElement>('retryBtn');
 const homeBtn = element<HTMLButtonElement>('homeBtn');
+const languageGroups = Array.from(document.querySelectorAll<HTMLElement>('[data-lang-group]'));
+const languageButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-lang]'));
+const descriptionMeta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
 
 const formatScore = (value: number): string => String(Math.max(0, Math.floor(value))).padStart(3, '0');
 
@@ -47,6 +51,8 @@ let shownBest = '';
 let shownShields: number | null = null;
 let shownPauseDisabled: boolean | null = null;
 let pointerStart: { id: number; x: number; y: number } | null = null;
+let language: Language = loadLanguage() ?? detectLanguage();
+let copy: Copy = COPY[language];
 
 const KEY_TO_DIRECTION: Readonly<Record<string, Direction | undefined>> = {
   ArrowUp: 'up',
@@ -58,6 +64,54 @@ const KEY_TO_DIRECTION: Readonly<Record<string, Direction | undefined>> = {
   s: 'down',
   d: 'right',
 };
+
+function announcePhase(): void {
+  if (engine.phase === 'ready') announcer.textContent = copy.announceReady;
+  else if (engine.phase === 'over') announcer.textContent = formatGameOver(language, engine.score, engine.best);
+  else if (engine.phase === 'paused') announcer.textContent = copy.announcePaused;
+  else announcer.textContent = '';
+}
+
+function syncSoundButton(): void {
+  soundBtn.setAttribute('aria-pressed', String(!audio.muted));
+  soundBtn.setAttribute('aria-label', copy.soundAria);
+  soundBtn.title = audio.muted ? copy.soundTitleOff : copy.soundTitleOn;
+}
+
+function applyLanguage(next: Language, persist = true): void {
+  language = next;
+  copy = COPY[language];
+
+  document.documentElement.lang = language;
+  document.title = copy.documentTitle;
+  if (descriptionMeta) descriptionMeta.content = copy.metaDescription;
+
+  for (const node of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
+    const key = node.dataset.i18n;
+    if (!key || !Object.hasOwn(copy, key)) continue;
+    node.textContent = copy[key as keyof Copy];
+  }
+
+  canvas.setAttribute('aria-label', copy.canvasLabel);
+  pauseBtn.setAttribute('aria-label', copy.pauseAria);
+  pauseBtn.title = copy.pauseTitleAttr;
+
+  for (const group of languageGroups) group.setAttribute('aria-label', copy.languageGroup);
+  for (const button of languageButtons) {
+    const active = button.dataset.lang === language;
+    const label = button.dataset.lang === 'fil' ? copy.languageFilipino : copy.languageEnglish;
+    button.setAttribute('aria-pressed', String(active));
+    button.setAttribute('aria-label', label);
+    button.title = label;
+  }
+
+  announcer.lang = language;
+  engine.shieldPopup = copy.shieldPopup;
+  syncSoundButton();
+  syncHud(true);
+  announcePhase();
+  if (persist) saveLanguage(language);
+}
 
 function syncPhase(force = false): void {
   if (!force && phase === engine.phase) return;
@@ -71,17 +125,17 @@ function syncPhase(force = false): void {
 
   if (phase === 'ready') {
     startBest.textContent = formatScore(engine.best);
-    announcer.textContent = 'Kalsada-Cat. Help the cat cross the street.';
+    announcer.textContent = copy.announceReady;
     startBtn.focus({ preventScroll: true });
   } else if (phase === 'over') {
     finalScore.textContent = formatScore(engine.score);
     finalBest.textContent = formatScore(engine.best);
     recordLine.hidden = !engine.lastRunRecord;
-    announcer.textContent = `Game over. Score ${engine.score}. Best ${engine.best}.`;
+    announcer.textContent = formatGameOver(language, engine.score, engine.best);
     retryBtn.focus({ preventScroll: true });
     persistBest();
   } else if (phase === 'paused') {
-    announcer.textContent = 'Game paused.';
+    announcer.textContent = copy.announcePaused;
     resumeBtn.focus({ preventScroll: true });
   } else if (phase === 'playing') {
     announcer.textContent = '';
@@ -105,7 +159,7 @@ function syncHud(force = false): void {
   if (force || engine.shields !== shownShields) {
     const stacks = engine.shields;
     powerBadge.hidden = stacks === 0;
-    powerBadge.title = stacks > 0 ? `${stacks} anting-anting shield${stacks === 1 ? '' : 's'}` : '';
+    powerBadge.title = stacks > 0 ? `${copy.power}${stacks > 1 ? ` x${stacks}` : ''}` : '';
     powerCount.hidden = stacks < 2;
     powerCount.textContent = stacks > 1 ? `x${stacks}` : '';
     shownShields = stacks;
@@ -162,8 +216,7 @@ function toggleSound(): void {
   audio.unlock();
   const muted = audio.toggle();
   saveMuted(muted);
-  soundBtn.setAttribute('aria-pressed', String(!muted));
-  soundBtn.title = muted ? 'Unmute (M)' : 'Mute (M)';
+  syncSoundButton();
   if (!muted) audio.play('click');
 }
 
@@ -192,8 +245,15 @@ pauseBtn.addEventListener('click', pauseGame);
 resumeBtn.addEventListener('click', resumeGame);
 soundBtn.addEventListener('click', toggleSound);
 
-soundBtn.setAttribute('aria-pressed', String(!audio.muted));
-soundBtn.title = audio.muted ? 'Unmute (M)' : 'Mute (M)';
+for (const button of languageButtons) {
+  button.addEventListener('click', () => {
+    const next: Language = button.dataset.lang === 'fil' ? 'fil' : 'en';
+    if (next === language) return;
+    audio.unlock();
+    audio.play('click');
+    applyLanguage(next);
+  });
+}
 
 canvas.addEventListener('pointerdown', (event) => {
   audio.unlock();
@@ -274,6 +334,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 renderer.draw(engine);
+applyLanguage(language, false);
 syncPhase(true);
 syncHud(true);
 

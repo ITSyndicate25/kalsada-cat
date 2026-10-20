@@ -27,7 +27,7 @@
 
         <header class="hud" id="hud">
           <div class="hud-panel">
-            <span class="hud-label">SCORE</span>
+            <span class="hud-label" data-i18n="score">SCORE</span>
             <span class="hud-value" id="score">000</span>
           </div>
           <div class="hud-actions">
@@ -44,70 +44,88 @@
             </button>
           </div>
           <div class="hud-panel hud-panel--right">
-            <span class="hud-label">BEST</span>
+            <span class="hud-label" data-i18n="best">BEST</span>
             <span class="hud-value" id="best">000</span>
           </div>
         </header>
 
         <div class="power-badge" id="powerBadge" hidden>
           <span class="power-dot" aria-hidden="true"></span>
-          SWERTE
+          <span data-i18n="power">SWERTE</span>
           <span class="power-count" id="powerCount" hidden></span>
         </div>
 
         <section class="screen screen--start" id="startScreen" aria-labelledby="gameTitle" role="dialog" aria-modal="true">
           <div class="hero">
-            <p class="eyebrow">MABUHAY, MINGMING</p>
+            <p class="eyebrow" data-i18n="startEyebrow">MABUHAY, MINGMING</p>
             <h1 class="title" id="gameTitle">
               <span class="title-kalsada">KALSADA</span>
               <span class="title-cat">CAT</span>
             </h1>
-            <p class="tagline">Tumawid ka. Iwasan ang jeepney.<br />Hanapin ang fishball.</p>
+            <p class="tagline">
+              <span data-i18n="startTaglineA">Tumawid ka. Iwasan ang jeepney.</span><br />
+              <span data-i18n="startTaglineB">Hanapin ang fishball.</span>
+            </p>
           </div>
 
           <div class="card start-card">
             <div class="stat-line">
-              <span class="hud-label">BEST</span>
+              <span class="hud-label" data-i18n="best">BEST</span>
               <strong id="startBest">000</strong>
             </div>
-            <button class="btn" id="startBtn" type="button">START</button>
+            <button class="btn" id="startBtn" type="button" data-i18n="startButton">START</button>
             <p class="keys">
-              <span>MOVE</span> SWIPE / ARROWS<br />
-              <span>HOP</span> TAP / UP
+              <span data-i18n="moveLabel">MOVE</span> <span data-i18n="moveKeys">SWIPE / ARROWS</span><br />
+              <span data-i18n="hopLabel">HOP</span> <span data-i18n="hopKeys">TAP / UP</span>
             </p>
+            <div class="lang-switch" role="group" aria-label="Language" data-lang-group>
+              <span class="lang-label" data-i18n="languageLabel">LANGUAGE</span>
+              <button class="lang-btn" type="button" data-lang="en" aria-pressed="true" aria-label="English">EN</button>
+              <button class="lang-btn" type="button" data-lang="fil" aria-pressed="false" aria-label="Filipino">FIL</button>
+            </div>
           </div>
         </section>
 
         <section class="screen screen--pause" id="pauseScreen" aria-labelledby="pauseTitle" role="dialog" aria-modal="true" hidden>
           <div class="card pause-card">
-            <p class="eyebrow">HINTO MUNA</p>
-            <h2 class="card-title" id="pauseTitle">PAUSED</h2>
-            <button class="btn" id="resumeBtn" type="button">RESUME</button>
-            <button class="btn btn--ghost" id="restartBtn" type="button">RESTART</button>
-            <button class="btn btn--ghost" id="quitBtn" type="button">QUIT</button>
+            <p class="eyebrow" data-i18n="pauseEyebrow">HINTO MUNA</p>
+            <h2 class="card-title" id="pauseTitle" data-i18n="pauseTitle">PAUSED</h2>
+            <button class="btn" id="resumeBtn" type="button" data-i18n="resume">RESUME</button>
+            <button class="btn btn--ghost" id="restartBtn" type="button" data-i18n="restart">RESTART</button>
+            <button class="btn btn--ghost" id="quitBtn" type="button" data-i18n="quit">QUIT</button>
+            <div class="lang-switch" role="group" aria-label="Language" data-lang-group>
+              <span class="lang-label" data-i18n="languageLabel">LANGUAGE</span>
+              <button class="lang-btn" type="button" data-lang="en" aria-pressed="true" aria-label="English">EN</button>
+              <button class="lang-btn" type="button" data-lang="fil" aria-pressed="false" aria-label="Filipino">FIL</button>
+            </div>
           </div>
         </section>
 
         <section class="screen screen--over" id="overScreen" aria-labelledby="overTitle" role="dialog" aria-modal="true" hidden>
           <div class="hero hero--over">
-            <p class="eyebrow">SAKIT AH</p>
-            <h2 class="crash-title" id="overTitle">BANGGA!</h2>
-            <p class="tagline">The jeepney always wins.</p>
+            <p class="eyebrow" data-i18n="overEyebrow">SAKIT AH</p>
+            <h2 class="crash-title" id="overTitle" data-i18n="overTitle">BANGGA!</h2>
+            <p class="tagline" data-i18n="overTagline">The jeepney always wins.</p>
           </div>
           <div class="card result-card">
             <div class="result-grid">
               <div class="stat-block">
-                <span class="hud-label">SCORE</span>
+                <span class="hud-label" data-i18n="score">SCORE</span>
                 <strong id="finalScore">000</strong>
               </div>
               <div class="stat-block stat-block--right">
-                <span class="hud-label">BEST</span>
+                <span class="hud-label" data-i18n="best">BEST</span>
                 <strong id="finalBest">000</strong>
               </div>
             </div>
-            <p class="record" id="recordLine" hidden>NEW RECORD!</p>
-            <button class="btn" id="retryBtn" type="button">ULIT</button>
-            <button class="btn btn--ghost" id="homeBtn" type="button">START SCREEN</button>
+            <p class="record" id="recordLine" data-i18n="record" hidden>NEW RECORD!</p>
+            <button class="btn" id="retryBtn" type="button" data-i18n="retry">ULIT</button>
+            <button class="btn btn--ghost" id="homeBtn" type="button" data-i18n="home">START SCREEN</button>
+            <div class="lang-switch" role="group" aria-label="Language" data-lang-group>
+              <span class="lang-label" data-i18n="languageLabel">LANGUAGE</span>
+              <button class="lang-btn" type="button" data-lang="en" aria-pressed="true" aria-label="English">EN</button>
+              <button class="lang-btn" type="button" data-lang="fil" aria-pressed="false" aria-label="Filipino">FIL</button>
+            </div>
           </div>
         </section>
 
@@ -115,9 +133,9 @@
       </main>
 
       <footer class="page-foot">
-        <span><kbd>ARROWS</kbd> / <kbd>WASD</kbd> move</span>
-        <span><kbd>P</kbd> pause</span>
-        <span><kbd>M</kbd> sound</span>
+        <span><kbd>ARROWS</kbd> / <kbd>WASD</kbd> <span data-i18n="footerMove">move</span></span>
+        <span><kbd>P</kbd> <span data-i18n="footerPause">pause</span></span>
+        <span><kbd>M</kbd> <span data-i18n="footerSound">sound</span></span>
       </footer>
     </div>
 
