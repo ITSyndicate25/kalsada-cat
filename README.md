@@ -121,7 +121,7 @@ These are designed extensions, not features in the current build.
 | Idea | Behavior |
 | --- | --- |
 | Traffic enforcer whistle | Freezes every vehicle for four seconds. Rare; spawns after 40 rows. |
-| Payong (umbrella) | Adds two shield charges and a visible canopy. Rare; spawns after 40 rows. |
+| Payong (umbrella) | Absorbs one hit without consuming a shield charge; the canopy breaks. Rare; spawns after 40 rows. |
 | Tsinelas (slipper) | Doubles hop speed for six seconds. The input buffer still applies. |
 | Halo-halo | Doubles all points for ten seconds. Pickups and distance both count. |
 | Balut | Revives once at the crash tile with two seconds of invulnerability. Single use per run. |
