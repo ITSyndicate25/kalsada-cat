@@ -1,0 +1,22 @@
+{
+  "name": "kalsada-cat",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A Filipino street-crossing pixel arcade game.",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}
