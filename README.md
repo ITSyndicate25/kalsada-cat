@@ -24,6 +24,9 @@ Requires Node 22.12 or newer. `.nvmrc` pins Node 24.
 | Start / retry | Space or Enter | Button |
 | Pause / resume | P or Escape | Pause button |
 | Mute / unmute | M | Sound button |
+| Switch English / Filipino | EN / FIL buttons on the start, pause, or game-over card | Same buttons |
+
+The game defaults to the saved language, then the browser language (`fil` or `tl`), then English. Switching updates the HUD, screens, controls, accessibility labels, and shield popup without reloading. The choice is stored under `kalsada-cat.lang.v1`.
 
 The game buffers one movement input while a hop finishes. Static props block the target tile; roads do not. Moving backward is allowed and costs no points.
 
@@ -75,7 +78,7 @@ stateDiagram-v2
 
 A new run creates a fresh world, places the cat at the starting sidewalk, resets score and shields, and starts input immediately. The best score survives runs.
 
-High scores live in `localStorage` under `kalsada-cat.best.v1`. The engine loads the value before the first frame, updates the live best as points land, and the UI persists a new record immediately. `NEW RECORD!` compares the final score against the best score at the start of that run, not against the live value the run already raised.
+High scores live in `localStorage` under `kalsada-cat.best.v1`. Language lives under `kalsada-cat.lang.v1`; sound lives under `kalsada-cat.muted.v1`. The engine loads the value before the first frame, updates the live best as points land, and the UI persists a new record immediately. `NEW RECORD!` compares the final score against the best score at the start of that run, not against the live value the run already raised.
 
 The game pauses when the document becomes hidden. The pause overlay stays up when the player returns, so a run never resumes behind the player's back.
 
@@ -140,7 +143,8 @@ Balance rules for any of these: do not spawn in the first 20 rows, cap one power
 | `src/render/sprites.ts` | Procedural pixel art for the cat, vehicles, props, and pickups |
 | `src/render/tiny-font.ts` | 3x5 bitmap font for shop signs and score popups |
 | `src/ui/audio.ts` | Web Audio chiptune effects |
-| `src/ui/storage.ts` | Local best score and sound preference |
+| `src/ui/i18n.ts` | English and Filipino copy, browser language detection, game-over announcement |
+| `src/ui/storage.ts` | Local best score, sound preference, and language |
 | `src/main.ts` | Canvas bootstrap, HUD, screens, keyboard, swipe, pause, and animation loop |
 | `src/styles.css` | Responsive frame, pixel panels, overlays, and controls |
 | `tests/game.test.ts` | World invariants, district coverage, traffic spacing and wraps, scoring, pickups, collisions, shield stacks |
