@@ -1,11 +1,10 @@
-import { PROP_WIDTH, TILE, VEHICLE_WIDTH, type PickupKind, type PropKind, type VehicleKind } from '../game/world';
+import { PROP_WIDTH, TILE, VEHICLE_VARIANTS, VEHICLE_WIDTH, type PickupKind, type PropKind, type VehicleKind } from '../game/world';
 import { drawTinyText } from './tiny-font';
 
 export const COLORS = {
   ink: '#191621',
   inkSoft: '#26212f',
   asphaltDark: '#403c4b',
-  sidewalkLine: '#bd9664',
   cream: '#f6e7c9',
   paper: '#fdf3dd',
   sun: '#ffc93f',
@@ -155,6 +154,11 @@ const VEHICLE_PALETTES: readonly VehiclePalette[] = [
   { body: '#7a3f5f', roof: COLORS.pink, accent: COLORS.lime, trim: COLORS.cream },
   { body: COLORS.red, roof: COLORS.cream, accent: COLORS.sun, trim: COLORS.teal },
 ];
+
+// The generator emits VEHICLE_VARIANTS indices; each one needs its own palette.
+if (VEHICLE_PALETTES.length < VEHICLE_VARIANTS) {
+  throw new Error('Vehicle palette count below VEHICLE_VARIANTS');
+}
 
 function drawWheel(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   rect(ctx, x, y, 8, 5, COLORS.ink);
@@ -390,7 +394,7 @@ function drawStore(ctx: CanvasRenderingContext2D, variant: number): void {
 
   rect(ctx, 4, 16, w - 8, 1, COLORS.wood);
   for (let x = 3; x < w - 3; x += 5) {
-    rect(ctx, x, 18, 2, 1, COLORS.sidewalkLine);
+    rect(ctx, x, 18, 2, 1, COLORS.inkSoft);
   }
 }
 
@@ -447,8 +451,8 @@ function drawCart(ctx: CanvasRenderingContext2D, variant: number): void {
   rect(ctx, 31, 11, 2, 3, COLORS.sun);
   rect(ctx, 7, 15, 28, 2, palette.canopyB);
   rect(ctx, 7, 15, 28, 1, palette.canopyA);
-  rect(ctx, 9, 16, 3, 1, COLORS.sidewalkLine);
-  rect(ctx, 14, 16, 3, 1, COLORS.sidewalkLine);
+  rect(ctx, 9, 16, 3, 1, COLORS.inkSoft);
+  rect(ctx, 14, 16, 3, 1, COLORS.inkSoft);
 
   rect(ctx, 11, 16, 6, 3, COLORS.ink);
   rect(ctx, 12, 17, 4, 1, COLORS.metalDark);
