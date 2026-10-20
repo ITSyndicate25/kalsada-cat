@@ -145,7 +145,8 @@ describe('Kalsada-Cat world', () => {
       for (const vehicle of lane.vehicles) variants.add(vehicle.variant);
     }
 
-    expect(variants.size).toBeGreaterThan(4);
+    expect(variants.size).toBe(VEHICLE_VARIANTS);
+    expect(Math.max(...variants)).toBe(VEHICLE_VARIANTS - 1);
     for (const variant of variants) {
       expect(variant).toBeGreaterThanOrEqual(0);
       expect(variant).toBeLessThan(VEHICLE_VARIANTS);
