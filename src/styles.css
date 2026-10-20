@@ -250,6 +250,11 @@ button {
   border: 1px solid var(--ink);
 }
 
+.power-count {
+  color: var(--coral);
+  letter-spacing: 0;
+}
+
 @keyframes badge-pulse {
   50% {
     transform: translateY(-1px);

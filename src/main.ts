@@ -22,6 +22,7 @@ const finalScore = element<HTMLElement>('finalScore');
 const finalBest = element<HTMLElement>('finalBest');
 const recordLine = element<HTMLElement>('recordLine');
 const powerBadge = element<HTMLElement>('powerBadge');
+const powerCount = element<HTMLElement>('powerCount');
 const announcer = element<HTMLElement>('announcer');
 const startBtn = element<HTMLButtonElement>('startBtn');
 const pauseBtn = element<HTMLButtonElement>('pauseBtn');
@@ -43,7 +44,7 @@ let phase: Phase | null = null;
 let phaseChangedAt = 0;
 let shownScore = '';
 let shownBest = '';
-let shownShield: boolean | null = null;
+let shownShields: number | null = null;
 let shownPauseDisabled: boolean | null = null;
 let pointerStart: { id: number; x: number; y: number } | null = null;
 
@@ -101,9 +102,13 @@ function syncHud(force = false): void {
     shownBest = bestText;
   }
 
-  if (force || engine.shield !== shownShield) {
-    powerBadge.hidden = !engine.shield;
-    shownShield = engine.shield;
+  if (force || engine.shields !== shownShields) {
+    const stacks = engine.shields;
+    powerBadge.hidden = stacks === 0;
+    powerBadge.title = stacks > 0 ? `${stacks} anting-anting shield${stacks === 1 ? '' : 's'}` : '';
+    powerCount.hidden = stacks < 2;
+    powerCount.textContent = stacks > 1 ? `x${stacks}` : '';
+    shownShields = stacks;
   }
 
   const pauseDisabled = engine.phase !== 'playing';
