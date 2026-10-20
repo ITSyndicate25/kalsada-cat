@@ -1,5 +1,5 @@
 import type { Engine } from '../game/engine';
-import { COLS, STAGE_HEIGHT, STAGE_WIDTH, TILE, VIEW_ROWS, type World } from '../game/world';
+import { COLS, STAGE_HEIGHT, STAGE_WIDTH, TILE, VIEW_ROWS, type SceneTheme, type World } from '../game/world';
 import {
   CAT_DRAW_OFFSET_X,
   CAT_DRAW_OFFSET_Y,
@@ -17,6 +17,75 @@ function hash2(x: number, y: number): number {
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
+
+interface ScenePalette {
+  road: string;
+  roadLight: string;
+  roadDark: string;
+  sidewalk: string;
+  sidewalkAlt: string;
+  sidewalkLine: string;
+  curb: string;
+  curbDark: string;
+  marking: string;
+  markingAlt: string;
+  accent: string;
+}
+
+const SCENE_PALETTES: Readonly<Record<SceneTheme, ScenePalette>> = {
+  barangay: {
+    road: '#46434f',
+    roadLight: '#504c59',
+    roadDark: '#3a3743',
+    sidewalk: '#c9cbc7',
+    sidewalkAlt: '#d2d4d0',
+    sidewalkLine: '#9fa39d',
+    curb: '#e3b85c',
+    curbDark: '#ae8742',
+    marking: '#e7dfcc',
+    markingAlt: '#f0bd45',
+    accent: '#7f9c62',
+  },
+  palengke: {
+    road: '#565150',
+    roadLight: '#615b59',
+    roadDark: '#484443',
+    sidewalk: '#c88d67',
+    sidewalkAlt: '#d39a74',
+    sidewalkLine: '#a56f52',
+    curb: '#e8c05a',
+    curbDark: '#b08a3e',
+    marking: '#f2e6cf',
+    markingAlt: '#e26045',
+    accent: '#7aa35b',
+  },
+  city: {
+    road: '#3f4654',
+    roadLight: '#495162',
+    roadDark: '#343a47',
+    sidewalk: '#adb6c0',
+    sidewalkAlt: '#b9c2cb',
+    sidewalkLine: '#87929f',
+    curb: '#d9d4c3',
+    curbDark: '#a29d8c',
+    marking: '#f2efe4',
+    markingAlt: '#f1c84c',
+    accent: '#6fb0c7',
+  },
+  baywalk: {
+    road: '#4a5151',
+    roadLight: '#555d5c',
+    roadDark: '#3e4545',
+    sidewalk: '#b9c8bf',
+    sidewalkAlt: '#c5d1c9',
+    sidewalkLine: '#92a79d',
+    curb: '#e4d3a4',
+    curbDark: '#ab9a6f',
+    marking: '#eaf1e8',
+    markingAlt: '#e0b856',
+    accent: '#4f9e96',
+  },
+};
 
 export class Renderer {
   private readonly ctx: CanvasRenderingContext2D;
@@ -76,46 +145,10 @@ export class Renderer {
       const top = this.screenY(row, camPx);
       if (top >= STAGE_HEIGHT || top + TILE <= 0) continue;
 
-      if (kind === 'sidewalk') {
-        for (let col = 0; col < COLS; col += 1) {
-          const tone = (row + col) % 2 === 0 ? COLORS.sidewalk : COLORS.sidewalkAlt;
-          ctx.fillStyle = tone;
-          ctx.fillRect(col * TILE, top, TILE, TILE);
-        }
-        ctx.globalAlpha = 0.2;
-        ctx.fillStyle = COLORS.sidewalkLine;
-        ctx.fillRect(0, top + TILE - 1, STAGE_WIDTH, 1);
-        for (let col = 0; col <= COLS; col += 1) ctx.fillRect(col * TILE, top, 1, TILE);
-        ctx.globalAlpha = 1;
-
-        for (let index = 0; index < 3; index += 1) {
-          const x = Math.floor(hash2(row, index) * STAGE_WIDTH);
-          const y = top + 4 + Math.floor(hash2(row + 9, index) * (TILE - 8));
-          const color = index === 0 && hash2(row, 3) > 0.7 ? COLORS.green : COLORS.sidewalkLine;
-          ctx.fillStyle = color;
-          ctx.fillRect(x, y, 1, 1);
-        }
-
-        if (hash2(row, 12) > 0.82) {
-          const x = 8 + Math.floor(hash2(row, 13) * (STAGE_WIDTH - 40));
-          ctx.fillStyle = COLORS.metalDark;
-          ctx.fillRect(x, top + 8, 12, 5);
-          ctx.fillStyle = COLORS.sidewalkLine;
-          ctx.fillRect(x + 1, top + 9, 10, 1);
-          ctx.fillRect(x + 1, top + 11, 10, 1);
-        }
-      } else {
-        ctx.fillStyle = COLORS.asphalt;
-        ctx.fillRect(0, top, STAGE_WIDTH, TILE);
-        ctx.fillStyle = COLORS.asphaltLight;
-        ctx.fillRect(0, top + 3, STAGE_WIDTH, 1);
-        ctx.fillStyle = COLORS.asphaltDark;
-        for (let index = 0; index < 5; index += 1) {
-          const x = Math.floor(hash2(row, index + 20) * STAGE_WIDTH);
-          const y = top + 3 + Math.floor(hash2(row + 31, index) * (TILE - 6));
-          ctx.fillRect(x, y, index % 2 === 0 ? 2 : 1, 1);
-        }
-      }
+      const theme = world.themeAt(row);
+      const palette = SCENE_PALETTES[theme];
+      if (kind === 'sidewalk') this.drawSidewalkRow(theme, row, top, palette);
+      else this.drawRoadRow(theme, row, top, palette);
     }
 
     for (let row = first; row <= last; row += 1) {
@@ -123,18 +156,19 @@ export class Renderer {
       if (!kind) continue;
       const top = this.screenY(row, camPx);
       if (top >= STAGE_HEIGHT || top + TILE <= 0) continue;
+      const palette = SCENE_PALETTES[world.themeAt(row)];
 
       if (kind === 'sidewalk') {
         if (world.kindAt(row - 1) === 'road') {
-          ctx.fillStyle = COLORS.curbDark;
+          ctx.fillStyle = palette.curbDark;
           ctx.fillRect(0, top + TILE - 3, STAGE_WIDTH, 1);
-          ctx.fillStyle = COLORS.curb;
+          ctx.fillStyle = palette.curb;
           ctx.fillRect(0, top + TILE - 2, STAGE_WIDTH, 2);
         }
         if (world.kindAt(row + 1) === 'road') {
-          ctx.fillStyle = COLORS.curb;
+          ctx.fillStyle = palette.curb;
           ctx.fillRect(0, top, STAGE_WIDTH, 2);
-          ctx.fillStyle = COLORS.curbDark;
+          ctx.fillStyle = palette.curbDark;
           ctx.fillRect(0, top + 2, STAGE_WIDTH, 1);
         }
       }
@@ -144,18 +178,162 @@ export class Renderer {
         const above = world.laneAt(row + 1);
         if (!lane || !above) continue;
         if (lane.dir !== above.dir) {
-          ctx.fillStyle = COLORS.laneYellow;
+          ctx.fillStyle = palette.markingAlt;
           for (let x = 6; x < STAGE_WIDTH; x += 26) {
             ctx.fillRect(x, top - 1, 14, 1);
             ctx.fillRect(x + 5, top + 1, 14, 1);
           }
         } else {
-          ctx.fillStyle = COLORS.laneWhite;
+          ctx.fillStyle = palette.marking;
           for (let x = 4; x < STAGE_WIDTH; x += 22) {
             ctx.fillRect(x, top, 11, 1);
           }
         }
       }
+    }
+  }
+
+  private drawSidewalkRow(theme: SceneTheme, row: number, top: number, palette: ScenePalette): void {
+    const ctx = this.ctx;
+
+    for (let col = 0; col < COLS; col += 1) {
+      const tone = (row + col) % 2 === 0 ? palette.sidewalk : palette.sidewalkAlt;
+      ctx.fillStyle = tone;
+      ctx.fillRect(col * TILE, top, TILE, TILE);
+    }
+
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = palette.sidewalkLine;
+    ctx.fillRect(0, top + TILE - 1, STAGE_WIDTH, 1);
+    for (let col = 0; col <= COLS; col += 1) ctx.fillRect(col * TILE, top, 1, TILE);
+    ctx.globalAlpha = 1;
+
+    if (theme === 'barangay') {
+      ctx.globalAlpha = 0.16;
+      ctx.fillStyle = palette.sidewalkLine;
+      for (let x = 20; x < STAGE_WIDTH; x += 40) ctx.fillRect(x, top + 2, 1, TILE - 4);
+      ctx.globalAlpha = 1;
+
+      if (hash2(row, 14) > 0.58) {
+        const x = 12 + Math.floor(hash2(row, 15) * (STAGE_WIDTH - 30));
+        ctx.fillStyle = palette.sidewalkLine;
+        ctx.fillRect(x, top + 4, 1, 5);
+        ctx.fillRect(x + 1, top + 8, 2, 1);
+      }
+      for (let index = 0; index < 3; index += 1) {
+        if (hash2(row + index, 16) < 0.62) continue;
+        const x = Math.floor(hash2(row, index + 17) * STAGE_WIDTH);
+        const y = top + 4 + Math.floor(hash2(row + 9, index) * (TILE - 8));
+        ctx.fillStyle = palette.accent;
+        ctx.fillRect(x, y, 1, 2);
+      }
+    } else if (theme === 'palengke') {
+      ctx.globalAlpha = 0.16;
+      for (let x = 0; x < STAGE_WIDTH; x += 10) ctx.fillRect(x, top, 1, TILE);
+      for (let y = top; y < top + TILE; y += 10) ctx.fillRect(0, y, STAGE_WIDTH, 1);
+      ctx.globalAlpha = 1;
+
+      const produce = [COLORS.coral, COLORS.amber, COLORS.lime];
+      for (let index = 0; index < 3; index += 1) {
+        if (hash2(row, index + 24) < 0.5) continue;
+        const x = 4 + Math.floor(hash2(row, index + 25) * (STAGE_WIDTH - 12));
+        const y = top + 4 + Math.floor(hash2(row + 7, index) * (TILE - 8));
+        ctx.fillStyle = produce[index] ?? COLORS.amber;
+        ctx.fillRect(x, y, 2, 1);
+      }
+    } else if (theme === 'city') {
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = palette.sidewalkLine;
+      for (let x = 0; x < STAGE_WIDTH; x += 40) ctx.fillRect(x, top, 1, TILE);
+      ctx.fillRect(0, top + 9, STAGE_WIDTH, 1);
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = palette.sidewalkLine;
+      for (let y = top + 4; y < top + TILE; y += 5) ctx.fillRect(0, y, STAGE_WIDTH, 1);
+      for (let x = 10; x < STAGE_WIDTH; x += 40) ctx.fillRect(x, top, 1, TILE);
+      ctx.globalAlpha = 1;
+
+      if (hash2(row, 32) > 0.62) {
+        const x = Math.floor(hash2(row, 33) * STAGE_WIDTH);
+        ctx.fillStyle = palette.accent;
+        ctx.fillRect(x, top + 3, 2, 1);
+      }
+    }
+
+    if ((theme === 'barangay' || theme === 'city') && hash2(row, 12) > 0.82) {
+      const x = 8 + Math.floor(hash2(row, 13) * (STAGE_WIDTH - 40));
+      ctx.fillStyle = COLORS.metalDark;
+      ctx.fillRect(x, top + 8, 12, 5);
+      ctx.fillStyle = palette.sidewalkLine;
+      ctx.fillRect(x + 1, top + 9, 10, 1);
+      ctx.fillRect(x + 1, top + 11, 10, 1);
+    }
+  }
+
+  private drawRoadRow(theme: SceneTheme, row: number, top: number, palette: ScenePalette): void {
+    const ctx = this.ctx;
+
+    ctx.fillStyle = palette.road;
+    ctx.fillRect(0, top, STAGE_WIDTH, TILE);
+    ctx.fillStyle = palette.roadLight;
+    ctx.fillRect(0, top + 3, STAGE_WIDTH, 1);
+    ctx.fillStyle = palette.roadDark;
+    for (let index = 0; index < 5; index += 1) {
+      const x = Math.floor(hash2(row, index + 20) * STAGE_WIDTH);
+      const y = top + 3 + Math.floor(hash2(row + 31, index) * (TILE - 6));
+      ctx.fillRect(x, y, index % 2 === 0 ? 2 : 1, 1);
+    }
+
+    if (theme === 'barangay') {
+      if (hash2(row, 40) > 0.54) {
+        const x = 10 + Math.floor(hash2(row, 41) * (STAGE_WIDTH - 30));
+        ctx.fillStyle = palette.roadDark;
+        ctx.fillRect(x, top + 7, 8, 3);
+        ctx.fillRect(x + 2, top + 10, 5, 1);
+        ctx.fillStyle = palette.roadLight;
+        ctx.fillRect(x + 1, top + 7, 6, 1);
+      }
+      if (hash2(row, 42) > 0.7) {
+        const x = 20 + Math.floor(hash2(row, 43) * (STAGE_WIDTH - 50));
+        ctx.fillStyle = palette.roadDark;
+        ctx.fillRect(x, top + 13, 14, 2);
+      }
+    } else if (theme === 'palengke') {
+      ctx.globalAlpha = 0.28;
+      ctx.fillStyle = palette.markingAlt;
+      const stainX = 8 + Math.floor(hash2(row, 50) * (STAGE_WIDTH - 30));
+      ctx.fillRect(stainX, top + 6, 10, 2);
+      ctx.fillRect((stainX + 90) % STAGE_WIDTH, top + 13, 8, 2);
+      ctx.globalAlpha = 1;
+      if (hash2(row, 44) > 0.64) {
+        const x = 24 + Math.floor(hash2(row, 45) * (STAGE_WIDTH - 50));
+        ctx.fillStyle = COLORS.woodLight;
+        ctx.fillRect(x, top + 12, 7, 2);
+      }
+    } else if (theme === 'city') {
+      ctx.fillStyle = palette.roadDark;
+      ctx.fillRect(0, top + 5, STAGE_WIDTH, 1);
+      ctx.fillRect(0, top + 16, STAGE_WIDTH, 1);
+      if (hash2(row, 46) > 0.68) {
+        const x = 16 + Math.floor(hash2(row, 47) * (STAGE_WIDTH - 40));
+        ctx.fillStyle = COLORS.metalDark;
+        ctx.fillRect(x, top + 9, 10, 5);
+        ctx.fillStyle = COLORS.metal;
+        ctx.fillRect(x + 1, top + 10, 8, 1);
+        ctx.fillRect(x + 1, top + 12, 8, 1);
+      }
+    } else {
+      if (hash2(row, 48) > 0.55) {
+        const x = 18 + Math.floor(hash2(row, 49) * (STAGE_WIDTH - 40));
+        ctx.fillStyle = palette.marking;
+        ctx.fillRect(x, top + 6, 9, 1);
+        ctx.fillRect(x + 3, top + 13, 6, 1);
+      }
+      ctx.fillStyle = palette.accent;
+      ctx.globalAlpha = 0.35;
+      ctx.fillRect(0, top + 18, STAGE_WIDTH, 1);
+      ctx.globalAlpha = 1;
     }
   }
 
@@ -248,16 +426,16 @@ export class Renderer {
     ctx.fillRect(centerX - 5, groundY - 1, 10, 1);
     ctx.globalAlpha = 1;
 
-    if (engine.shield) {
+    if (engine.shields > 0) {
       const sparkle = 0.55 + Math.sin(engine.time * 6) * 0.35;
       ctx.globalAlpha = Math.max(0.2, sparkle);
       ctx.fillStyle = COLORS.sun;
       ctx.fillRect(x + 1, y + 3, 1, 2);
-      ctx.fillRect(x + 22, y + 9, 1, 2);
-      ctx.fillRect(x + 4, y + 21, 2, 1);
-      ctx.fillRect(x + 18, y + 21, 2, 1);
+      ctx.fillRect(x + 14, y + 7, 1, 2);
+      ctx.fillRect(x + 3, y + 14, 2, 1);
+      ctx.fillRect(x + 12, y + 14, 2, 1);
       ctx.fillStyle = COLORS.paper;
-      ctx.fillRect(x + 22, y + 6, 1, 1);
+      ctx.fillRect(x + 14, y + 5, 1, 1);
       ctx.globalAlpha = 1;
     }
 
@@ -270,10 +448,10 @@ export class Renderer {
 
     if (engine.phase === 'dying') {
       ctx.fillStyle = COLORS.paper;
-      ctx.fillRect(x + 4, y + 8, 3, 1);
-      ctx.fillRect(x + 5, y + 7, 1, 3);
-      ctx.fillRect(x + 17, y + 8, 3, 1);
-      ctx.fillRect(x + 18, y + 7, 1, 3);
+      ctx.fillRect(x + 3, y + 5, 3, 1);
+      ctx.fillRect(x + 4, y + 4, 1, 3);
+      ctx.fillRect(x + 10, y + 5, 3, 1);
+      ctx.fillRect(x + 11, y + 4, 1, 3);
     }
 
     ctx.globalAlpha = 1;

@@ -4,16 +4,8 @@ import { drawTinyText } from './tiny-font';
 export const COLORS = {
   ink: '#191621',
   inkSoft: '#26212f',
-  asphalt: '#4a4656',
-  asphaltLight: '#524e5e',
   asphaltDark: '#403c4b',
-  laneWhite: '#d9d2c0',
-  laneYellow: '#f1bd45',
-  sidewalk: '#d9b17c',
-  sidewalkAlt: '#dfba87',
   sidewalkLine: '#bd9664',
-  curb: '#f0c15e',
-  curbDark: '#b48745',
   cream: '#f6e7c9',
   paper: '#fdf3dd',
   sun: '#ffc93f',
@@ -82,30 +74,22 @@ function cachedSprite(key: string, width: number, height: number, draw: (ctx: Ca
 }
 
 const CAT_ART = [
-  '........................',
-  '....kk............kk....',
-  '...kppk..........kppk...',
-  '...kppkkkkkkkkkkkkppk...',
-  '...kkkkkkkkkkkkkkkkkk...',
-  '...kkkkkkkkkkkkkkkkkk...',
-  '...kkkkkkkkkkkkkkkkkk...',
-  '...kkeeekkkkkkkkeeekk...',
-  '...kkewekkkkkkkkewekk...',
-  '...kkkkkkkkknnkkkkkkk...',
-  '...kkkkkkkkkkkkkkkkkk...',
-  '....kkkkkkkkkkkkkkkk....',
-  '.....kkkkkkkkkkkkkk.....',
-  '......kkkkkkkkkkkk......',
-  '......kkkkkkkkkkkk......',
-  '......kkkkkkkkkkkk......',
-  '......kkkkkkkkkkkk......',
-  '......kkkkkkkkkkkk......',
-  '......kkkkkkkkkkkk......',
-  '......kkk.kk.kk.kkk.....',
-  '.......kk.kk.kk.kk......',
-  '.......kk.kk.kk.kk......',
-  '........................',
-  '........................',
+  '................',
+  '..kk........kk..',
+  '.kppk......kppk.',
+  '.kppkkkkkkkkppk.',
+  '.kkkkkkkkkkkkkk.',
+  '.kkeeekkkkeeekk.',
+  '.kkewekkkkewekk.',
+  '.kkkkkkknnkkkkk.',
+  '..kkkkkkkkkkkk..',
+  '...kkkkkkkkkk...',
+  '...kkkkkkkkkk...',
+  '...kk.kk.kk.kk..',
+  '...kk.kk.kk.kk..',
+  '....k..k..k..k..',
+  '................',
+  '................',
 ];
 
 const CAT_PALETTE: Readonly<Record<string, string>> = {
@@ -118,35 +102,27 @@ const CAT_PALETTE: Readonly<Record<string, string>> = {
 
 const TAIL_FRAMES: ReadonlyArray<ReadonlyArray<readonly [number, number]>> = [
   [
-    [16, 18],
-    [17, 18],
-    [18, 17],
-    [19, 16],
-    [20, 15],
-    [21, 14],
-    [21, 13],
-    [21, 12],
+    [13, 10],
+    [14, 10],
+    [14, 9],
+    [14, 8],
   ],
   [
-    [16, 18],
-    [17, 18],
-    [18, 17],
-    [19, 17],
-    [20, 16],
-    [21, 15],
-    [22, 14],
-    [22, 13],
+    [13, 11],
+    [14, 11],
+    [14, 10],
+    [14, 9],
   ],
 ];
 
-export const CAT_SPRITE_SIZE = 24;
-export const CAT_DRAW_OFFSET_X = -2;
-export const CAT_DRAW_OFFSET_Y = -2;
+export const CAT_SPRITE_SIZE = 16;
+export const CAT_DRAW_OFFSET_X = 2;
+export const CAT_DRAW_OFFSET_Y = 4;
 
 export function getCatSprite(frame: 0 | 1): HTMLCanvasElement {
   return cachedSprite(`cat-${frame}`, CAT_SPRITE_SIZE, CAT_SPRITE_SIZE, (ctx) => {
     const tail = TAIL_FRAMES[frame] ?? TAIL_FRAMES[0] ?? [];
-    for (const [x, y] of tail) rect(ctx, x, y, 3, 3, COLORS.cat);
+    for (const [x, y] of tail) rect(ctx, x, y, 2, 2, COLORS.cat);
 
     for (let y = 0; y < CAT_ART.length; y += 1) {
       const line = CAT_ART[y] ?? '';
@@ -171,6 +147,13 @@ const VEHICLE_PALETTES: readonly VehiclePalette[] = [
   { body: COLORS.magenta, roof: COLORS.pink, accent: COLORS.sun, trim: COLORS.purple },
   { body: COLORS.purple, roof: '#ded4f4', accent: COLORS.pink, trim: COLORS.sun },
   { body: COLORS.blue, roof: COLORS.cream, accent: COLORS.sun, trim: COLORS.coral },
+  { body: COLORS.amber, roof: COLORS.cream, accent: COLORS.green, trim: COLORS.paper },
+  { body: COLORS.green, roof: COLORS.sun, accent: COLORS.red, trim: COLORS.cream },
+  { body: '#d96b2b', roof: COLORS.cream, accent: COLORS.blue, trim: COLORS.sun },
+  { body: '#e6dcc8', roof: COLORS.red, accent: COLORS.blue, trim: COLORS.sun },
+  { body: COLORS.aqua, roof: '#2f4d5c', accent: COLORS.coral, trim: COLORS.paper },
+  { body: '#7a3f5f', roof: COLORS.pink, accent: COLORS.lime, trim: COLORS.cream },
+  { body: COLORS.red, roof: COLORS.cream, accent: COLORS.sun, trim: COLORS.teal },
 ];
 
 function drawWheel(ctx: CanvasRenderingContext2D, x: number, y: number): void {
@@ -180,7 +163,7 @@ function drawWheel(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   rect(ctx, x + 2, y + 2, 1, 1, COLORS.paper);
 }
 
-function drawJeepney(ctx: CanvasRenderingContext2D, palette: VehiclePalette): void {
+function drawJeepney(ctx: CanvasRenderingContext2D, palette: VehiclePalette, style: number): void {
   const w = VEHICLE_WIDTH.jeepney;
   rect(ctx, 3, 18, w - 6, 2, COLORS.shadow);
 
@@ -219,11 +202,24 @@ function drawJeepney(ctx: CanvasRenderingContext2D, palette: VehiclePalette): vo
   rect(ctx, 46, 12, 3, 1, COLORS.metalDark);
   rect(ctx, 50, 12, 2, 1, COLORS.metalDark);
 
+  if (style === 1) {
+    rect(ctx, 5, 0, 40, 1, COLORS.metalDark);
+    rect(ctx, 8, 0, 7, 2, COLORS.amber);
+    rect(ctx, 9, 0, 3, 1, COLORS.paper);
+    rect(ctx, 30, 0, 8, 2, COLORS.teal);
+    rect(ctx, 31, 0, 3, 1, COLORS.aqua);
+  } else if (style === 2) {
+    for (let x = 7; x < 51; x += 6) {
+      rect(ctx, x, 15, 4, 1, x % 12 === 7 ? palette.trim : palette.accent);
+    }
+    rect(ctx, 43, 8, 1, 8, palette.trim);
+  }
+
   drawWheel(ctx, 10, 13);
   drawWheel(ctx, 41, 13);
 }
 
-function drawTricycle(ctx: CanvasRenderingContext2D, palette: VehiclePalette): void {
+function drawTricycle(ctx: CanvasRenderingContext2D, palette: VehiclePalette, style: number): void {
   const w = VEHICLE_WIDTH.tricycle;
   rect(ctx, 2, 18, w - 4, 2, COLORS.shadow);
 
@@ -254,11 +250,21 @@ function drawTricycle(ctx: CanvasRenderingContext2D, palette: VehiclePalette): v
   rect(ctx, 27, 6, 4, 1, COLORS.metalDark);
   rect(ctx, 29, 9, 2, 2, COLORS.sun);
 
+  if (style === 1) {
+    rect(ctx, 4, 0, 12, 2, COLORS.woodDark);
+    rect(ctx, 5, 0, 4, 1, COLORS.amber);
+    rect(ctx, 11, 0, 4, 1, palette.accent);
+  } else if (style === 2) {
+    rect(ctx, 1, 0, 1, 4, COLORS.ink);
+    rect(ctx, 2, 0, 4, 2, palette.accent);
+    rect(ctx, 3, 15, 15, 1, palette.trim);
+  }
+
   drawWheel(ctx, 4, 14);
   drawWheel(ctx, 23, 14);
 }
 
-function drawBus(ctx: CanvasRenderingContext2D, palette: VehiclePalette): void {
+function drawBus(ctx: CanvasRenderingContext2D, palette: VehiclePalette, style: number): void {
   const w = VEHICLE_WIDTH.bus;
   rect(ctx, 3, 18, w - 6, 2, COLORS.shadow);
 
@@ -290,18 +296,32 @@ function drawBus(ctx: CanvasRenderingContext2D, palette: VehiclePalette): void {
   rect(ctx, 71, 12, 2, 2, COLORS.metal);
   rect(ctx, 59, 11, 2, 5, COLORS.ink);
 
+  if (style === 1) {
+    rect(ctx, 8, 0, 15, 2, COLORS.woodDark);
+    rect(ctx, 9, 0, 4, 1, COLORS.amber);
+    rect(ctx, 14, 0, 4, 1, COLORS.aqua);
+    rect(ctx, 30, 0, 10, 2, COLORS.woodDark);
+    rect(ctx, 31, 0, 3, 1, COLORS.paper);
+  } else if (style === 2) {
+    for (let x = 6; x < 68; x += 8) {
+      rect(ctx, x, 15, 4, 1, x % 16 === 6 ? palette.trim : palette.accent);
+    }
+    rect(ctx, 60, 1, 12, 1, palette.accent);
+  }
+
   drawWheel(ctx, 12, 13);
   drawWheel(ctx, 57, 13);
 }
 
 export function getVehicleSprite(kind: VehicleKind, variant: number): HTMLCanvasElement {
   const paletteIndex = Math.abs(variant) % VEHICLE_PALETTES.length;
+  const style = Math.abs(variant) % 3;
   const palette = VEHICLE_PALETTES[paletteIndex] ?? VEHICLE_PALETTES[0];
   if (!palette) throw new Error('Missing vehicle palette');
-  return cachedSprite(`vehicle-${kind}-${paletteIndex}`, VEHICLE_WIDTH[kind], TILE, (ctx) => {
-    if (kind === 'jeepney') drawJeepney(ctx, palette);
-    else if (kind === 'tricycle') drawTricycle(ctx, palette);
-    else drawBus(ctx, palette);
+  return cachedSprite(`vehicle-${kind}-${paletteIndex}-${style}`, VEHICLE_WIDTH[kind], TILE, (ctx) => {
+    if (kind === 'jeepney') drawJeepney(ctx, palette, style);
+    else if (kind === 'tricycle') drawTricycle(ctx, palette, style);
+    else drawBus(ctx, palette, style);
   });
 }
 
@@ -436,6 +456,56 @@ function drawCart(ctx: CanvasRenderingContext2D, variant: number): void {
   rect(ctx, 26, 17, 4, 1, COLORS.metalDark);
 }
 
+function drawCrates(ctx: CanvasRenderingContext2D, variant: number): void {
+  const produce = [
+    [COLORS.sun, COLORS.lime, COLORS.amber],
+    [COLORS.coral, COLORS.lime, COLORS.sun],
+    [COLORS.green, COLORS.aqua, COLORS.amber],
+  ][variant] ?? [COLORS.sun, COLORS.lime, COLORS.amber];
+
+  rect(ctx, 2, 18, 16, 2, COLORS.shadow);
+
+  rect(ctx, 2, 9, 16, 9, COLORS.ink);
+  rect(ctx, 3, 10, 14, 7, COLORS.woodDark);
+  rect(ctx, 4, 11, 12, 1, COLORS.wood);
+  rect(ctx, 4, 14, 12, 1, COLORS.wood);
+  rect(ctx, 4, 16, 12, 1, COLORS.woodLight);
+
+  rect(ctx, 4, 4, 13, 7, COLORS.ink);
+  rect(ctx, 5, 5, 11, 5, COLORS.woodLight);
+  rect(ctx, 6, 6, 9, 1, COLORS.wood);
+  rect(ctx, 6, 8, 9, 1, COLORS.wood);
+
+  for (let index = 0; index < 6; index += 1) {
+    const x = 5 + ((index * 3 + variant) % 11);
+    const y = 2 + (index % 3);
+    rect(ctx, x, y, 2, 1, produce[index % produce.length] ?? COLORS.sun);
+  }
+  rect(ctx, 7, 1, 1, 1, COLORS.paper);
+}
+
+function drawBench(ctx: CanvasRenderingContext2D, variant: number): void {
+  const w = PROP_WIDTH.bench * TILE;
+  const paint = [COLORS.green, COLORS.blue, COLORS.teal][variant] ?? COLORS.green;
+
+  rect(ctx, 3, 18, w - 6, 2, COLORS.shadow);
+
+  rect(ctx, 2, 2, w - 4, 6, COLORS.ink);
+  rect(ctx, 3, 3, w - 6, 4, paint);
+  rect(ctx, 3, 4, w - 6, 1, COLORS.lime);
+
+  rect(ctx, 1, 8, w - 2, 6, COLORS.ink);
+  rect(ctx, 2, 9, w - 4, 4, paint);
+  for (let x = 6; x < w - 5; x += 6) rect(ctx, x, 9, 1, 4, COLORS.inkSoft);
+
+  rect(ctx, 1, 7, 2, 7, COLORS.ink);
+  rect(ctx, w - 3, 7, 2, 7, COLORS.ink);
+  rect(ctx, 4, 14, 3, 5, COLORS.ink);
+  rect(ctx, w - 7, 14, 3, 5, COLORS.ink);
+  rect(ctx, 4, 14, 1, 4, COLORS.metalDark);
+  rect(ctx, w - 7, 14, 1, 4, COLORS.metalDark);
+}
+
 function drawChair(ctx: CanvasRenderingContext2D, x: number, y: number, color: string): void {
   rect(ctx, x + 1, y, 8, 2, COLORS.ink);
   rect(ctx, x, y + 2, 10, 6, COLORS.ink);
@@ -557,10 +627,12 @@ function drawPole(ctx: CanvasRenderingContext2D): void {
 export function getPropSprite(kind: PropKind, variant = 0): HTMLCanvasElement {
   const width = PROP_WIDTH[kind] * TILE;
   const height = kind === 'pole' ? 48 : TILE;
-  const variantIndex = kind === 'store' || kind === 'cart' ? Math.abs(variant) % 3 : 0;
+  const variantIndex = kind === 'store' || kind === 'cart' || kind === 'crates' || kind === 'bench' ? Math.abs(variant) % 3 : 0;
   return cachedSprite(`prop-${kind}-${variantIndex}`, width, height, (ctx) => {
     if (kind === 'store') drawStore(ctx, variantIndex);
     else if (kind === 'cart') drawCart(ctx, variantIndex);
+    else if (kind === 'crates') drawCrates(ctx, variantIndex);
+    else if (kind === 'bench') drawBench(ctx, variantIndex);
     else if (kind === 'chairs') drawChairs(ctx);
     else if (kind === 'trash') drawTrash(ctx);
     else if (kind === 'plant') drawPlant(ctx);
