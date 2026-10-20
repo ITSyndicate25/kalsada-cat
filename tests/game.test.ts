@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { Engine } from '../src/game/engine';
 import { mulberry32 } from '../src/game/rng';
-import { PICKUP_BONUS, START_COL, START_ROW, TILE, VIEW_ROWS, World } from '../src/game/world';
+import {
+  PICKUP_BONUS,
+  SCENE_ORDER,
+  START_COL,
+  START_ROW,
+  STAGE_WIDTH,
+  TILE,
+  VEHICLE_VARIANTS,
+  VEHICLE_WIDTH,
+  VIEW_ROWS,
+  World,
+} from '../src/game/world';
 
 function run(engine: Engine, seconds: number): void {
   const step = 1 / 60;
@@ -25,6 +36,9 @@ describe('Kalsada-Cat world', () => {
     expect(world.rows.length).toBeGreaterThanOrEqual(VIEW_ROWS * 12);
     expect(world.rows.slice(0, 3)).toEqual(['sidewalk', 'sidewalk', 'sidewalk']);
     expect(world.lanes.size).toBeGreaterThan(8);
+    expect(world.themes).toHaveLength(world.rows.length);
+    expect(new Set(world.themes).size).toBe(SCENE_ORDER.length);
+    expect(world.themeAt(0)).toBe('barangay');
 
     for (let row = 0; row < world.rows.length; row += 1) {
       const kind = world.rows[row];
@@ -89,6 +103,52 @@ describe('Kalsada-Cat world', () => {
         if (!previous || !current) continue;
         expect(current.x).toBeGreaterThanOrEqual(previous.x + previous.width - 0.001);
       }
+    }
+  });
+
+  it('re-enters wrapped traffic only from outside the stage', () => {
+    const world = new World(mulberry32(808));
+    world.ensure(60);
+    const row = world.rows.findIndex((kind) => kind === 'road');
+    const lane = world.laneAt(row);
+    expect(lane).toBeDefined();
+    if (!lane) return;
+
+    lane.speed = 0;
+    lane.dir = 1;
+    lane.vehicles = [
+      { kind: 'jeepney', variant: 0, x: STAGE_WIDTH + 61, width: VEHICLE_WIDTH.jeepney },
+      { kind: 'jeepney', variant: 1, x: 120, width: VEHICLE_WIDTH.jeepney },
+    ];
+    world.updateTraffic(0, row, row);
+    const wrappedRight = lane.vehicles[0];
+    expect(wrappedRight).toBeDefined();
+    expect(wrappedRight?.x).toBeLessThanOrEqual(-VEHICLE_WIDTH.jeepney);
+
+    lane.dir = -1;
+    lane.vehicles = [
+      { kind: 'bus', variant: 2, x: -VEHICLE_WIDTH.bus - 61, width: VEHICLE_WIDTH.bus },
+      { kind: 'bus', variant: 3, x: 120, width: VEHICLE_WIDTH.bus },
+    ];
+    world.updateTraffic(0, row, row);
+    const wrappedLeft = lane.vehicles[0];
+    expect(wrappedLeft).toBeDefined();
+    expect(wrappedLeft?.x).toBeGreaterThanOrEqual(STAGE_WIDTH);
+  });
+
+  it('uses the full vehicle variant range', () => {
+    const world = new World(mulberry32(4242));
+    world.ensure(120);
+    const variants = new Set<number>();
+
+    for (const lane of world.lanes.values()) {
+      for (const vehicle of lane.vehicles) variants.add(vehicle.variant);
+    }
+
+    expect(variants.size).toBeGreaterThan(4);
+    for (const variant of variants) {
+      expect(variant).toBeGreaterThanOrEqual(0);
+      expect(variant).toBeLessThan(VEHICLE_VARIANTS);
     }
   });
 });
@@ -182,7 +242,53 @@ describe('Kalsada-Cat engine', () => {
     expect(gameOver.record).toBe(true);
   });
 
-  it('consumes anting shield on the first hit and dies on the next one', () => {
+  it('moves traffic in rows that have not entered the camera yet', () => {
+    const engine = new Engine({ rng: mulberry32(2026) });
+    engine.start();
+    emptyLanes(engine);
+
+    const farRow = engine.world.rows.findIndex((kind, row) => kind === 'road' && row > VIEW_ROWS + 4);
+    const lane = engine.world.laneAt(farRow);
+    expect(farRow).toBeGreaterThan(VIEW_ROWS + 4);
+    expect(lane).toBeDefined();
+    if (!lane) return;
+
+    lane.speed = 40;
+    lane.dir = 1;
+    lane.vehicles = [{ kind: 'jeepney', variant: 0, x: 60, width: VEHICLE_WIDTH.jeepney }];
+    const before = lane.vehicles[0]?.x ?? 0;
+
+    engine.update(1 / 60);
+
+    expect(lane.vehicles[0]?.x).toBeGreaterThan(before);
+  });
+
+  it('stacks anting shields from pickups', () => {
+    const engine = new Engine({ rng: mulberry32(7) });
+    engine.start();
+    emptyLanes(engine);
+    engine.world.ensure(500);
+    emptyLanes(engine);
+
+    const antings = engine.world.pickups.filter((pickup) => pickup.kind === 'anting');
+    expect(antings.length).toBeGreaterThanOrEqual(4);
+
+    for (let index = 0; index < 4; index += 1) {
+      const pickup = antings[index];
+      if (!pickup) return;
+      engine.player.col = pickup.col;
+      engine.player.fromCol = pickup.col;
+      engine.player.row = pickup.row;
+      engine.player.fromRow = pickup.row;
+      engine.player.hop = 0.99;
+      engine.update(0.02);
+    }
+
+    expect(engine.shields).toBe(4);
+    expect(engine.score).toBe(0);
+  });
+
+  it('stacks anting shields and consumes one per hit', () => {
     const engine = new Engine({ rng: mulberry32(1234) });
     engine.start();
     emptyLanes(engine);
@@ -203,17 +309,19 @@ describe('Kalsada-Cat engine', () => {
       x: engine.player.col * TILE - 20,
       width: 58,
     });
-    engine.shield = true;
+    engine.shields = 2;
 
     engine.update(1 / 60);
     expect(engine.phase).toBe('playing');
-    expect(engine.shield).toBe(false);
+    expect(engine.shields).toBe(1);
     expect(engine.invuln).toBeGreaterThan(0);
     expect(engine.drainEvents().some((event) => event.type === 'shield-break')).toBe(true);
 
-    for (let frame = 0; frame < 180 && engine.phase === 'playing'; frame += 1) {
-      engine.update(1 / 60);
-    }
+    run(engine, 1.7);
+    expect(engine.phase).toBe('playing');
+    expect(engine.shields).toBe(0);
+
+    run(engine, 1.7);
     expect(engine.phase).toBe('dying');
   });
 });
