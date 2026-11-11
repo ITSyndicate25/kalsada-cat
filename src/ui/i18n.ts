@@ -1,3 +1,5 @@
+import type { PowerKind } from '../game/world';
+
 export type Language = 'en' | 'fil';
 
 export interface Copy {
@@ -30,6 +32,7 @@ export interface Copy {
   footerMove: string;
   footerPause: string;
   footerSound: string;
+  footerMusic: string;
   pauseAria: string;
   pauseTitleAttr: string;
   soundAria: string;
@@ -41,6 +44,15 @@ export interface Copy {
   languageFilipino: string;
   announceReady: string;
   announcePaused: string;
+  catLabel: string;
+  skinLabel: string;
+  skinNames: Record<string, string>;
+  musicOn: string;
+  musicOff: string;
+  musicAria: string;
+  powerCount: string;
+  shieldAria: string;
+  powerLabels: Record<PowerKind, string>;
 }
 
 export const COPY: Readonly<Record<Language, Copy>> = {
@@ -76,6 +88,7 @@ export const COPY: Readonly<Record<Language, Copy>> = {
     footerMove: 'move',
     footerPause: 'pause',
     footerSound: 'sound',
+    footerMusic: 'music',
     pauseAria: 'Pause game',
     pauseTitleAttr: 'Pause (P)',
     soundAria: 'Toggle sound',
@@ -87,6 +100,30 @@ export const COPY: Readonly<Record<Language, Copy>> = {
     languageFilipino: 'Filipino',
     announceReady: 'Kalsada-Cat. Help the cat cross the street.',
     announcePaused: 'Game paused.',
+    catLabel: 'CAT',
+    skinLabel: 'COLOR',
+    skinNames: {
+      mingming: 'Black',
+      puti: 'White',
+      pula: 'Red',
+      dilaw: 'Yellow',
+      luntian: 'Green',
+      tala: 'Violet',
+    },
+    musicOn: 'ON',
+    musicOff: 'OFF',
+    musicAria: 'Toggle music',
+    powerCount: 'Shields',
+    shieldAria: 'Shield charges',
+    powerLabels: {
+      enforcer: 'WHISTLE',
+      payong: 'UMBRELLA',
+      tsinelas: 'SLIPPERS',
+      halohalo: 'HALO-HALO',
+      balut: 'BALUT',
+      turon: 'TURON',
+      sampaguita: 'SAMPAGUITA',
+    },
   },
   fil: {
     documentTitle: 'Kalsada-Cat · arcade ng pagtawid sa kalsada ng Pilipinas',
@@ -120,6 +157,7 @@ export const COPY: Readonly<Record<Language, Copy>> = {
     footerMove: 'gumalaw',
     footerPause: 'i-pause',
     footerSound: 'tunog',
+    footerMusic: 'musika',
     pauseAria: 'I-pause ang laro',
     pauseTitleAttr: 'I-pause (P)',
     soundAria: 'I-toggle ang tunog',
@@ -131,6 +169,30 @@ export const COPY: Readonly<Record<Language, Copy>> = {
     languageFilipino: 'Filipino',
     announceReady: 'Kalsada-Cat. Tulungan ang pusa na tumawid sa kalsada.',
     announcePaused: 'Nakahinto ang laro.',
+    catLabel: 'PUSA',
+    skinLabel: 'KULAY',
+    skinNames: {
+      mingming: 'Itim',
+      puti: 'Puti',
+      pula: 'Pula',
+      dilaw: 'Dilaw',
+      luntian: 'Berde',
+      tala: 'Lila',
+    },
+    musicOn: 'BUKAS',
+    musicOff: 'SARA',
+    musicAria: 'I-toggle ang musika',
+    powerCount: 'Swerte',
+    shieldAria: 'Bilang ng swerte',
+    powerLabels: {
+      enforcer: 'PITO',
+      payong: 'PAYONG',
+      tsinelas: 'TSINELAS',
+      halohalo: 'HALO-HALO',
+      balut: 'BALUT',
+      turon: 'TURON',
+      sampaguita: 'SAMPAGUITA',
+    },
   },
 };
 

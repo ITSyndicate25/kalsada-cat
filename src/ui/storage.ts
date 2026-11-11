@@ -3,6 +3,8 @@ import type { Language } from './i18n';
 const BEST_KEY = 'kalsada-cat.best.v1';
 const MUTED_KEY = 'kalsada-cat.muted.v1';
 const LANGUAGE_KEY = 'kalsada-cat.lang.v1';
+const SKIN_KEY = 'kalsada-cat.skin.v1';
+const MUSIC_KEY = 'kalsada-cat.music.v1';
 
 function read(key: string): string | null {
   try {
@@ -48,5 +50,31 @@ export function saveLanguage(language: Language): void {
     window.localStorage.setItem(LANGUAGE_KEY, language);
   } catch {
     // Language is resettable; blocked storage must not stop the game.
+  }
+}
+
+export function loadSkin(skins: readonly string[]): string | null {
+  const value = read(SKIN_KEY);
+  return value !== null && skins.includes(value) ? value : null;
+}
+
+export function saveSkin(skin: string): void {
+  try {
+    window.localStorage.setItem(SKIN_KEY, skin);
+  } catch {
+    // Cosmetic choice; blocked storage must not stop the game.
+  }
+}
+
+export function loadMusic(): boolean {
+  // No stored value means a first visit: music starts on by default.
+  return read(MUSIC_KEY) !== '0';
+}
+
+export function saveMusic(on: boolean): void {
+  try {
+    window.localStorage.setItem(MUSIC_KEY, on ? '1' : '0');
+  } catch {
+    // Sound preference is non-critical.
   }
 }
