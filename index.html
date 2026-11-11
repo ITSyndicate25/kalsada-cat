@@ -34,6 +34,16 @@
             <button class="icon-btn" id="pauseBtn" type="button" aria-label="Pause game" title="Pause (P)">II</button>
             <button
               class="icon-btn icon-btn--wide"
+              id="musicBtn"
+              type="button"
+              aria-label="Toggle music"
+              aria-pressed="false"
+              title="Music (N)"
+            >
+              BGM
+            </button>
+            <button
+              class="icon-btn icon-btn--wide"
               id="soundBtn"
               type="button"
               aria-label="Toggle sound"
@@ -55,6 +65,8 @@
           <span class="power-count" id="powerCount" hidden></span>
         </div>
 
+        <div class="effect-tray" id="effectTray" aria-live="off"></div>
+
         <section class="screen screen--start" id="startScreen" aria-labelledby="gameTitle" role="dialog" aria-modal="true">
           <div class="hero">
             <p class="eyebrow" data-i18n="startEyebrow">MABUHAY, MINGMING</p>
@@ -74,6 +86,10 @@
               <strong id="startBest">000</strong>
             </div>
             <button class="btn" id="startBtn" type="button" data-i18n="startButton">START</button>
+            <div class="cat-picker" role="group" data-cat-group>
+              <span class="lang-label" data-i18n="skinLabel">COLOR</span>
+              <div class="cat-swatches" id="catSwatches"></div>
+            </div>
             <p class="keys">
               <span data-i18n="moveLabel">MOVE</span>
               <span class="keys-value" data-i18n="moveKeys">SWIPE / ARROWS</span><br />
@@ -138,6 +154,7 @@
         <span><kbd>ARROWS</kbd> / <kbd>WASD</kbd> <span data-i18n="footerMove">move</span></span>
         <span><kbd>P</kbd> <span data-i18n="footerPause">pause</span></span>
         <span><kbd>M</kbd> <span data-i18n="footerSound">sound</span></span>
+        <span><kbd>N</kbd> <span data-i18n="footerMusic">music</span></span>
       </footer>
     </div>
 

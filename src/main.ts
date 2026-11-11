@@ -1,9 +1,11 @@
 import './styles.css';
 import { Engine, type Direction, type Phase } from './game/engine';
+import type { PickupKind } from './game/world';
 import { Renderer } from './render/renderer';
+import { CAT_SKIN_NAMES, getCatSprite, type CatSkin } from './render/sprites';
 import { AudioBus } from './ui/audio';
 import { COPY, detectLanguage, formatGameOver, type Copy, type Language } from './ui/i18n';
-import { loadBest, loadLanguage, loadMuted, saveBest, saveLanguage, saveMuted } from './ui/storage';
+import { loadBest, loadLanguage, loadMuted, loadMusic, loadSkin, saveBest, saveLanguage, saveMuted, saveMusic, saveSkin } from './ui/storage';
 
 function element<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -24,6 +26,9 @@ const finalBest = element<HTMLElement>('finalBest');
 const recordLine = element<HTMLElement>('recordLine');
 const powerBadge = element<HTMLElement>('powerBadge');
 const powerCount = element<HTMLElement>('powerCount');
+const effectTray = element<HTMLElement>('effectTray');
+const musicBtn = element<HTMLButtonElement>('musicBtn');
+const catSwatches = element<HTMLElement>('catSwatches');
 const announcer = element<HTMLElement>('announcer');
 const startBtn = element<HTMLButtonElement>('startBtn');
 const pauseBtn = element<HTMLButtonElement>('pauseBtn');
@@ -44,11 +49,18 @@ const engine = new Engine({ best: storedBest });
 const renderer = new Renderer(canvas);
 const audio = new AudioBus(loadMuted());
 
+const SKINS = CAT_SKIN_NAMES;
+const skinSwatches = new Map<CatSkin, HTMLButtonElement>();
+const storedSkin = loadSkin(SKINS);
+let skin: CatSkin = SKINS.find((name) => name === storedSkin) ?? 'mingming';
+let musicOn = loadMusic();
+
 let phase: Phase | null = null;
 let phaseChangedAt = 0;
 let shownScore = '';
 let shownBest = '';
 let shownShields: number | null = null;
+let shownChips = '';
 let shownPauseDisabled: boolean | null = null;
 let pointerStart: { id: number; x: number; y: number } | null = null;
 let language: Language = loadLanguage() ?? detectLanguage();
@@ -78,6 +90,87 @@ function syncSoundButton(): void {
   soundBtn.title = audio.muted ? copy.soundTitleOff : copy.soundTitleOn;
 }
 
+function syncMusicButton(): void {
+  musicBtn.setAttribute('aria-pressed', String(musicOn));
+  musicBtn.setAttribute('aria-label', copy.musicAria);
+  musicBtn.title = musicOn ? copy.musicOn : copy.musicOff;
+  musicBtn.textContent = 'BGM';
+  musicBtn.dataset.state = musicOn ? 'on' : 'off';
+}
+
+function applySkin(next: CatSkin, persist = true): void {
+  skin = next;
+  renderer.skin = next;
+  for (const [name, swatch] of skinSwatches) {
+    swatch.setAttribute('aria-pressed', String(name === next));
+    swatch.title = copy.skinNames[name] ?? name;
+  }
+  if (persist) saveSkin(next);
+}
+
+function buildSwatches(): void {
+  for (const name of SKINS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'cat-swatch';
+    button.dataset.skin = name;
+
+    // Draw the actual sprite so the swatch can never drift from the game art.
+    const preview = document.createElement('canvas');
+    preview.width = 16;
+    preview.height = 16;
+    preview.className = 'swatch-canvas';
+    const previewCtx = preview.getContext('2d');
+    if (previewCtx) {
+      previewCtx.imageSmoothingEnabled = false;
+      previewCtx.drawImage(getCatSprite(0, name), 0, 0);
+    }
+    button.appendChild(preview);
+
+    button.addEventListener('click', () => {
+      audio.unlock();
+      audio.play('click');
+      applySkin(name);
+    });
+    skinSwatches.set(name, button);
+    catSwatches.appendChild(button);
+  }
+}
+
+function toggleMusic(): void {
+  audio.unlock();
+  musicOn = !musicOn;
+  audio.setMusic(musicOn);
+  saveMusic(musicOn);
+  syncMusicButton();
+  if (musicOn) audio.play('click');
+}
+
+function syncEffectTray(force = false): void {
+  const chips = engine.effectChips();
+  let signature = '';
+  for (const chip of chips) signature += `${chip.kind}:${chip.seconds}|`;
+  if (!force && signature === shownChips) return;
+  shownChips = signature;
+  effectTray.textContent = '';
+  for (const chip of chips) {
+    const node = document.createElement('span');
+    node.className = 'effect-chip';
+    node.dataset.kind = chip.kind;
+
+    const label = document.createElement('span');
+    label.textContent = chip.label;
+
+    const time = document.createElement('span');
+    time.className = 'effect-time';
+    time.textContent = chip.seconds > 0 ? `${chip.seconds}` : '∞';
+
+    node.appendChild(label);
+    node.appendChild(time);
+    effectTray.appendChild(node);
+  }
+}
+
 function applyLanguage(next: Language, persist = true): void {
   language = next;
   copy = COPY[language];
@@ -89,12 +182,16 @@ function applyLanguage(next: Language, persist = true): void {
   for (const node of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
     const key = node.dataset.i18n;
     if (!key || !Object.hasOwn(copy, key)) continue;
-    node.textContent = copy[key as keyof Copy];
+    const value = copy[key as keyof Copy];
+    if (typeof value !== 'string') continue;
+    node.textContent = value;
   }
 
   canvas.setAttribute('aria-label', copy.canvasLabel);
   pauseBtn.setAttribute('aria-label', copy.pauseAria);
   pauseBtn.title = copy.pauseTitleAttr;
+  musicBtn.setAttribute('aria-label', copy.musicAria);
+  applySkin(skin, false);
 
   for (const group of languageGroups) group.setAttribute('aria-label', copy.languageGroup);
   for (const button of languageButtons) {
@@ -107,6 +204,7 @@ function applyLanguage(next: Language, persist = true): void {
 
   announcer.lang = language;
   engine.shieldPopup = copy.shieldPopup;
+  engine.powerLabels = copy.powerLabels;
   syncSoundButton();
   syncHud(true);
   announcePhase();
@@ -149,6 +247,8 @@ function syncHud(force = false): void {
     scoreValue.textContent = scoreText;
     shownScore = scoreText;
   }
+
+  syncEffectTray(force);
 
   const bestText = formatScore(engine.best);
   if (force || bestText !== shownBest) {
@@ -220,12 +320,28 @@ function toggleSound(): void {
   if (!muted) audio.play('click');
 }
 
+const PICKUP_SOUNDS: Partial<Record<PickupKind, 'coin' | 'power' | 'whistle' | 'sparkle'>> = {
+  fishball: 'coin',
+  kikiam: 'coin',
+  anting: 'power',
+  enforcer: 'whistle',
+  payong: 'power',
+  tsinelas: 'sparkle',
+  halohalo: 'sparkle',
+  balut: 'power',
+  turon: 'sparkle',
+  sampaguita: 'sparkle',
+};
+
 function processEvents(): void {
   for (const event of engine.drainEvents()) {
     if (event.type === 'hop') audio.play('hop');
     else if (event.type === 'bump') audio.play('bump');
-    else if (event.type === 'pickup') audio.play(event.kind === 'anting' ? 'power' : 'coin');
+    else if (event.type === 'pickup') audio.play(PICKUP_SOUNDS[event.kind] ?? 'coin');
+    else if (event.type === 'stumble') audio.play('stumble');
     else if (event.type === 'shield-break') audio.play('shield-break');
+    else if (event.type === 'payong-break') audio.play('payong-break');
+    else if (event.type === 'revive') audio.play('revive');
     else if (event.type === 'crash') audio.play('crash');
     else if (event.type === 'start') audio.play('start');
     else if (event.type === 'gameover') {
@@ -244,6 +360,7 @@ quitBtn.addEventListener('click', goHome);
 pauseBtn.addEventListener('click', pauseGame);
 resumeBtn.addEventListener('click', resumeGame);
 soundBtn.addEventListener('click', toggleSound);
+musicBtn.addEventListener('click', toggleMusic);
 
 for (const button of languageButtons) {
   button.addEventListener('click', () => {
@@ -325,6 +442,12 @@ window.addEventListener('keydown', (event) => {
     return;
   }
 
+  if ((event.key === 'n' || event.key === 'N') && !event.repeat) {
+    event.preventDefault();
+    toggleMusic();
+    return;
+  }
+
   const direction = KEY_TO_DIRECTION[event.key] ?? KEY_TO_DIRECTION[event.key.toLowerCase()];
   if (!direction) return;
   event.preventDefault();
@@ -339,6 +462,10 @@ document.addEventListener('visibilitychange', () => {
 });
 
 renderer.draw(engine);
+buildSwatches();
+applySkin(skin, false);
+audio.setMusic(musicOn);
+syncMusicButton();
 applyLanguage(language, false);
 syncPhase(true);
 syncHud(true);

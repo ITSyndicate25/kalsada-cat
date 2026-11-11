@@ -261,6 +261,77 @@ button {
   }
 }
 
+.effect-tray {
+  position: absolute;
+  z-index: 3;
+  top: clamp(50px, 14cqw, 70px);
+  right: clamp(8px, 2.4cqw, 12px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.effect-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 6px;
+  border: 2px solid var(--ink);
+  background: var(--teal);
+  color: var(--ink);
+  box-shadow: 3px 3px 0 var(--paper);
+  font-size: clamp(7px, 2.1cqw, 10px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.effect-chip .effect-time {
+  color: var(--paper);
+  letter-spacing: 0;
+}
+
+.cat-picker {
+  margin-top: 10px;
+}
+
+.cat-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.cat-swatch {
+  width: 30px;
+  height: 26px;
+  padding: 2px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--line);
+  background: var(--ink-soft);
+  box-shadow: 2px 2px 0 var(--ghost-shadow);
+  cursor: pointer;
+  appearance: none;
+}
+
+.cat-swatch .swatch-canvas {
+  width: 22px;
+  height: 22px;
+  image-rendering: pixelated;
+}
+
+.cat-swatch[aria-pressed='true'] {
+  border-color: var(--sun);
+  box-shadow: 2px 2px 0 var(--sun);
+}
+
+.cat-swatch:focus-visible {
+  outline: 2px solid var(--paper);
+  outline-offset: 1px;
+}
+
 .screen {
   position: absolute;
   z-index: 4;
