@@ -51,7 +51,7 @@ The game buffers one movement input while a hop finishes. Static props block the
 | Lubak / baha | A pothole or flood patch on a road tile. Landing on it holds the cat for 150 ms before the next hop. It never deals damage. |
 | Parked tricycle | Blocks two sidewalk tiles, forcing a detour. |
 | Barricade | Blocks one sidewalk tile for 4 to 8 s, then clears itself. |
-| Sparking wire | A sidewalk tile under a power pole sparks for 0.3 s of every second. Touching it while it sparks hits like a vehicle. The flash is drawn from the same clock the hit uses. |
+| Sparking wire | A sidewalk tile under a power pole scars the pavement and sparks for 0.3 s of every second. An arc crackles over the tile for the 0.18 s before each strike. Touching it while it sparks hits like a vehicle. The flash is drawn from the same clock the hit uses. Props and pickups never spawn on a spark tile. |
 | Tiangge stall, rice sacks | Extra blocking sidewalk props in the provinciya and tiangge districts. |
 
 Every island still guarantees one fully clear column at generation time. Dogs, vendors, and sparks move, so that column can be dangerous for a moment; wait for the safe beat.

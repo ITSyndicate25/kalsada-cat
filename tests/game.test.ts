@@ -647,6 +647,33 @@ describe('Kalsada-Cat powers', () => {
     for (const chip of both) expect(chip.seconds).toBe(0);
   });
 
+  it('keeps props and pickups off spark tiles', () => {
+    let sparks = 0;
+    for (let seed = 1; seed <= 40; seed += 1) {
+      const world = new World(mulberry32(seed * 104729));
+      world.ensure(900);
+      for (const spark of world.sparks.values()) {
+        sparks += 1;
+        expect(world.blockedAt(spark.col, spark.row)).toBe(false);
+        expect(world.pickups.some((pickup) => pickup.col === spark.col && pickup.row === spark.row)).toBe(false);
+      }
+    }
+    expect(sparks).toBeGreaterThan(0);
+  });
+
+  it('warns before a spark turns lethal and never while it is lethal', () => {
+    const engine = new Engine({ rng: mulberry32(41) });
+    engine.start();
+
+    for (let clock = 0; clock < 1; clock += 0.01) {
+      engine.time = clock;
+      const charging = engine.isSparkCharging(0);
+      const active = engine.isSparkActive(0);
+      expect(charging && active).toBe(false);
+      if (clock >= 0.98) expect(charging).toBe(true);
+    }
+  });
+
   it('attracts fishballs with turon for its timer window', () => {
     const engine = new Engine({ rng: mulberry32(38) });
     engine.start();

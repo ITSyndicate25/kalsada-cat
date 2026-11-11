@@ -242,19 +242,46 @@ export class Renderer {
     ctx.globalAlpha = 1;
 
     const spark = world.sparks.get(row);
-    if (spark && engine.isSparkActive(spark.phase)) {
+    if (spark) {
       const x = spark.col * TILE;
-      ctx.fillStyle = '#fff3c4';
-      ctx.fillRect(x + 4, top + 3, 12, 1);
-      ctx.fillRect(x + 3, top + 5, 14, 1);
-      ctx.fillRect(x + 6, top + 7, 9, 1);
-      ctx.fillStyle = COLORS.sun;
-      ctx.fillRect(x + 5, top + 4, 2, 3);
-      ctx.fillRect(x + 12, top + 5, 2, 3);
-      ctx.fillStyle = COLORS.aqua;
-      ctx.fillRect(x + 8, top + 6, 4, 1);
+      // The scorch mark is always on: the tile is a hazard whether or not the
+      // bolt is lit, and the player needs to learn where it is.
+      ctx.fillStyle = '#3b3038';
+      ctx.fillRect(x + 6, top + 12, 8, 2);
+      ctx.fillRect(x + 8, top + 14, 4, 1);
       ctx.fillStyle = COLORS.ink;
-      ctx.fillRect(x + 9, top + 2, 2, 4);
+      ctx.fillRect(x + 9, top + 0, 2, 3);
+
+      if (engine.isSparkCharging(spark.phase)) {
+        // Crackle before the strike: arcs creep across the tile, so the hit
+        // never arrives without warning.
+        ctx.fillStyle = COLORS.aqua;
+        ctx.fillRect(x + 9, top + 3, 1, 3);
+        ctx.fillRect(x + 12, top + 6, 1, 3);
+        ctx.fillRect(x + 6, top + 8, 1, 3);
+        ctx.fillStyle = COLORS.sun;
+        ctx.fillRect(x + 9, top + 7, 2, 1);
+        ctx.fillRect(x + 4, top + 11, 3, 1);
+        ctx.fillRect(x + 14, top + 12, 3, 1);
+      }
+
+      if (engine.isSparkActive(spark.phase)) {
+        // The flash covers the whole lethal box: the arcs spread across the
+        // tile down to the scorch mark, so what hits is what the player sees.
+        ctx.fillStyle = '#fff3c4';
+        for (let y = top + 4; y <= top + 14; y += 3) {
+          ctx.fillRect(x + 3 + ((y - top) % 4), y, 13, 1);
+        }
+        ctx.fillStyle = COLORS.sun;
+        ctx.fillRect(x + 4, top + 4, 2, 4);
+        ctx.fillRect(x + 13, top + 7, 2, 4);
+        ctx.fillRect(x + 8, top + 10, 3, 4);
+        ctx.fillStyle = COLORS.aqua;
+        ctx.fillRect(x + 6, top + 7, 5, 1);
+        ctx.fillRect(x + 11, top + 13, 4, 1);
+        ctx.fillStyle = COLORS.ink;
+        ctx.fillRect(x + 9, top + 2, 2, 4);
+      }
     }
 
     if (theme === 'barangay') {

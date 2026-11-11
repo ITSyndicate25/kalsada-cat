@@ -75,6 +75,8 @@ const CALM_TIME = 8;
 const MAGNET_RADIUS = 2;
 const SPARK_CYCLE = 1;
 const SPARK_ACTIVE = 0.3;
+/** The bolt crackles this long before it strikes, so the hit is readable. */
+const SPARK_WARN = 0.18;
 
 const DELTAS: Record<Direction, { x: number; y: number }> = {
   up: { x: 0, y: 1 },
@@ -550,12 +552,21 @@ export class Engine {
     }
   }
 
+  private sparkClock(phase: number): number {
+    return (this.time + phase) % SPARK_CYCLE;
+  }
+
   private sparkActive(phase: number): boolean {
-    return (this.time + phase) % SPARK_CYCLE < SPARK_ACTIVE;
+    return this.sparkClock(phase) < SPARK_ACTIVE;
   }
 
   isSparkActive(phase: number): boolean {
     return this.sparkActive(phase);
+  }
+
+  /** True while the bolt is drawing itself together, just before it strikes. */
+  isSparkCharging(phase: number): boolean {
+    return this.sparkClock(phase) >= SPARK_CYCLE - SPARK_WARN;
   }
 
   private die(): void {

@@ -241,6 +241,7 @@ export class World {
         const nextRow = pickup.row + step.r;
         const key = tileKey(nextCol, nextRow);
         if (this.blocked.has(key) || this.pickupTiles.has(key)) continue;
+        if (this.sparks.get(nextRow)?.col === nextCol) continue;
         this.pickupTiles.delete(tileKey(pickup.col, pickup.row));
         pickup.col = nextCol;
         pickup.row = nextRow;
@@ -536,8 +537,10 @@ export class World {
   private addSidewalkPickups(start: number, size: number, initial: boolean): void {
     const free: Array<{ col: number; row: number }> = [];
     for (let row = start; row < start + size; row += 1) {
+      const spark = this.sparks.get(row);
       for (let col = 0; col < COLS; col += 1) {
         if (initial && col === START_COL && row === START_ROW) continue;
+        if (spark && spark.col === col) continue;
         if (this.blocked.has(tileKey(col, row))) continue;
         if (this.pickupTiles.has(tileKey(col, row))) continue;
         free.push({ col, row });
@@ -580,6 +583,10 @@ export class World {
     const width = PROP_WIDTH[kind];
     if (col < 0 || col + width > COLS) return false;
     if (safeCol >= col && safeCol < col + width) return false;
+    // A spark tile stays open: a prop drawn over it would hide the bolt, and
+    // the sampaguita clearing that prop would reveal a hazard nobody saw.
+    const spark = this.sparks.get(row);
+    if (spark && spark.col >= col && spark.col < col + width) return false;
 
     for (let x = col; x < col + width; x += 1) {
       if (this.blocked.has(tileKey(x, row))) return false;
