@@ -6,9 +6,12 @@ import {
   COLORS,
   drawWire,
   getCatSprite,
+  getDogSprite,
   getPickupSprite,
   getPropSprite,
+  getVendorSprite,
   getVehicleSprite,
+  type CatSkin,
 } from './sprites';
 import { drawTinyText } from './tiny-font';
 
@@ -72,6 +75,32 @@ const SCENE_PALETTES: Readonly<Record<SceneTheme, ScenePalette>> = {
     markingAlt: '#f1c84c',
     accent: '#6fb0c7',
   },
+  provinciya: {
+    road: '#4f4a40',
+    roadLight: '#5b5548',
+    roadDark: '#413d35',
+    sidewalk: '#a3a06c',
+    sidewalkAlt: '#b0ac77',
+    sidewalkLine: '#7d7a4e',
+    curb: '#c9bd8a',
+    curbDark: '#94895d',
+    marking: '#efe7cf',
+    markingAlt: '#dba44c',
+    accent: '#7c9a4c',
+  },
+  tiangge: {
+    road: '#4a4152',
+    roadLight: '#564c5e',
+    roadDark: '#3c3444',
+    sidewalk: '#9c8ba4',
+    sidewalkAlt: '#a997b1',
+    sidewalkLine: '#796a82',
+    curb: '#d3b7d9',
+    curbDark: '#9c85a3',
+    marking: '#f2ebf2',
+    markingAlt: '#e0779d',
+    accent: '#8f6fc2',
+  },
   baywalk: {
     road: '#4a5151',
     roadLight: '#555d5c',
@@ -89,6 +118,7 @@ const SCENE_PALETTES: Readonly<Record<SceneTheme, ScenePalette>> = {
 
 export class Renderer {
   private readonly ctx: CanvasRenderingContext2D;
+  skin: CatSkin = 'mingming';
 
   constructor(canvas: HTMLCanvasElement) {
     const ctx = canvas.getContext('2d');
@@ -115,8 +145,9 @@ export class Renderer {
       ctx.translate(shakeX, shakeY);
     }
 
-    this.drawRows(engine.world, camPx, first, last);
+    this.drawRows(engine, camPx, first, last);
     this.drawProps(engine.world, camPx, first, last);
+    this.drawActors(engine, camPx, first, last);
     this.drawTraffic(engine, camPx, first, last);
     this.drawWires(engine.world, camPx);
     this.drawPickups(engine, camPx, first, last);
@@ -136,8 +167,9 @@ export class Renderer {
     return STAGE_HEIGHT + camPx - (row + 1) * TILE;
   }
 
-  private drawRows(world: World, camPx: number, first: number, last: number): void {
+  private drawRows(engine: Engine, camPx: number, first: number, last: number): void {
     const ctx = this.ctx;
+    const world = engine.world;
 
     for (let row = first; row <= last; row += 1) {
       const kind = world.kindAt(row);
@@ -147,8 +179,8 @@ export class Renderer {
 
       const theme = world.themeAt(row);
       const palette = SCENE_PALETTES[theme];
-      if (kind === 'sidewalk') this.drawSidewalkRow(theme, row, top, palette);
-      else this.drawRoadRow(theme, row, top, palette);
+      if (kind === 'sidewalk') this.drawSidewalkRow(engine, theme, row, top, palette);
+      else this.drawRoadRow(world, theme, row, top, palette);
     }
 
     for (let row = first; row <= last; row += 1) {
@@ -193,8 +225,9 @@ export class Renderer {
     }
   }
 
-  private drawSidewalkRow(theme: SceneTheme, row: number, top: number, palette: ScenePalette): void {
+  private drawSidewalkRow(engine: Engine, theme: SceneTheme, row: number, top: number, palette: ScenePalette): void {
     const ctx = this.ctx;
+    const world = engine.world;
 
     for (let col = 0; col < COLS; col += 1) {
       const tone = (row + col) % 2 === 0 ? palette.sidewalk : palette.sidewalkAlt;
@@ -207,6 +240,22 @@ export class Renderer {
     ctx.fillRect(0, top + TILE - 1, STAGE_WIDTH, 1);
     for (let col = 0; col <= COLS; col += 1) ctx.fillRect(col * TILE, top, 1, TILE);
     ctx.globalAlpha = 1;
+
+    const spark = world.sparks.get(row);
+    if (spark && engine.isSparkActive(spark.phase)) {
+      const x = spark.col * TILE;
+      ctx.fillStyle = '#fff3c4';
+      ctx.fillRect(x + 4, top + 3, 12, 1);
+      ctx.fillRect(x + 3, top + 5, 14, 1);
+      ctx.fillRect(x + 6, top + 7, 9, 1);
+      ctx.fillStyle = COLORS.sun;
+      ctx.fillRect(x + 5, top + 4, 2, 3);
+      ctx.fillRect(x + 12, top + 5, 2, 3);
+      ctx.fillStyle = COLORS.aqua;
+      ctx.fillRect(x + 8, top + 6, 4, 1);
+      ctx.fillStyle = COLORS.ink;
+      ctx.fillRect(x + 9, top + 2, 2, 4);
+    }
 
     if (theme === 'barangay') {
       ctx.globalAlpha = 0.16;
@@ -247,6 +296,37 @@ export class Renderer {
       for (let x = 0; x < STAGE_WIDTH; x += 40) ctx.fillRect(x, top, 1, TILE);
       ctx.fillRect(0, top + 9, STAGE_WIDTH, 1);
       ctx.globalAlpha = 1;
+    } else if (theme === 'provinciya') {
+      // Packed dirt with scattered weeds.
+      ctx.globalAlpha = 0.22;
+      ctx.fillStyle = palette.sidewalkLine;
+      for (let index = 0; index < 5; index += 1) {
+        if (hash2(row, index + 60) < 0.45) continue;
+        const x = Math.floor(hash2(row, index + 61) * (STAGE_WIDTH - 8));
+        const y = top + 3 + Math.floor(hash2(row + 3, index) * (TILE - 8));
+        ctx.fillRect(x, y, 2, 1);
+      }
+      ctx.globalAlpha = 1;
+
+      for (let index = 0; index < 3; index += 1) {
+        if (hash2(row + index, 62) < 0.62) continue;
+        const x = Math.floor(hash2(row, index + 63) * (STAGE_WIDTH - 6));
+        ctx.fillStyle = palette.accent;
+        ctx.fillRect(x, top + 5, 1, 3);
+        ctx.fillRect(x + 1, top + 4, 1, 1);
+        ctx.fillRect(x - 1, top + 6, 1, 1);
+      }
+    } else if (theme === 'tiangge') {
+      // Night-market pennants strung above the pavement.
+      const flags = [COLORS.sun, COLORS.coral, COLORS.aqua, COLORS.pink];
+      for (let x = 2; x < STAGE_WIDTH; x += 12) {
+        ctx.fillStyle = flags[Math.floor(x / 12) % flags.length] ?? COLORS.sun;
+        ctx.fillRect(x, top + 1, 4, 2);
+      }
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = palette.sidewalkLine;
+      ctx.fillRect(0, top + 14, STAGE_WIDTH, 1);
+      ctx.globalAlpha = 1;
     } else {
       ctx.globalAlpha = 0.18;
       ctx.fillStyle = palette.sidewalkLine;
@@ -271,7 +351,7 @@ export class Renderer {
     }
   }
 
-  private drawRoadRow(theme: SceneTheme, row: number, top: number, palette: ScenePalette): void {
+  private drawRoadRow(world: World, theme: SceneTheme, row: number, top: number, palette: ScenePalette): void {
     const ctx = this.ctx;
 
     ctx.fillStyle = palette.road;
@@ -283,6 +363,21 @@ export class Renderer {
       const x = Math.floor(hash2(row, index + 20) * STAGE_WIDTH);
       const y = top + 3 + Math.floor(hash2(row + 31, index) * (TILE - 6));
       ctx.fillRect(x, y, index % 2 === 0 ? 2 : 1, 1);
+    }
+
+    for (let col = 0; col < COLS; col += 1) {
+      if (!world.isLubak(col, row)) continue;
+      const x = col * TILE;
+      ctx.fillStyle = '#332e24';
+      ctx.fillRect(x + 2, top + 6, 16, 9);
+      ctx.fillRect(x + 4, top + 4, 12, 2);
+      ctx.fillRect(x + 4, top + 15, 12, 1);
+      ctx.fillStyle = '#4a4234';
+      ctx.fillRect(x + 4, top + 7, 12, 2);
+      ctx.fillStyle = '#5c5342';
+      ctx.fillRect(x + 6, top + 9, 8, 4);
+      ctx.fillStyle = '#6e6250';
+      ctx.fillRect(x + 7, top + 10, 3, 1);
     }
 
     if (theme === 'barangay') {
@@ -323,6 +418,27 @@ export class Renderer {
         ctx.fillRect(x + 1, top + 10, 8, 1);
         ctx.fillRect(x + 1, top + 12, 8, 1);
       }
+    } else if (theme === 'tiangge') {
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = palette.markingAlt;
+      const glowX = 8 + Math.floor(hash2(row, 52) * (STAGE_WIDTH - 30));
+      ctx.fillRect(glowX, top + 8, 14, 2);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = palette.roadDark;
+      ctx.fillRect(0, top + 16, STAGE_WIDTH, 1);
+    } else if (theme === 'provinciya') {
+      // Two tire ruts and a dry, dusty shoulder.
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = palette.roadDark;
+      ctx.fillRect(0, top + 5, STAGE_WIDTH, 1);
+      ctx.fillRect(0, top + 14, STAGE_WIDTH, 1);
+      ctx.globalAlpha = 1;
+      if (hash2(row, 53) > 0.6) {
+        const x = 12 + Math.floor(hash2(row, 54) * (STAGE_WIDTH - 30));
+        ctx.fillStyle = palette.marking;
+        ctx.fillRect(x, top + 9, 2, 1);
+        ctx.fillRect(x + 4, top + 10, 3, 1);
+      }
     } else {
       if (hash2(row, 48) > 0.55) {
         const x = 18 + Math.floor(hash2(row, 49) * (STAGE_WIDTH - 40));
@@ -346,6 +462,58 @@ export class Renderer {
       const y = rowTop + TILE - sprite.height;
       if (y > STAGE_HEIGHT || y + sprite.height < 0) continue;
       this.ctx.drawImage(sprite, x, y);
+    }
+  }
+
+  private drawActors(engine: Engine, camPx: number, first: number, last: number): void {
+    const ctx = this.ctx;
+    const world = engine.world;
+
+    for (const dog of world.dogs) {
+      if (dog.row < first || dog.row > last) continue;
+      const sprite = getDogSprite();
+      const top = this.screenY(dog.row, camPx);
+      const x = Math.round(dog.pos * TILE);
+      const y = top + TILE - sprite.height + 2;
+      if (y > STAGE_HEIGHT || y + sprite.height < 0) continue;
+
+      if (engine.calmTimer > 0) {
+        // Calmed dogs sit still; a sleeping "Z" makes the safe state readable.
+        ctx.fillStyle = COLORS.paper;
+        ctx.fillRect(x + 13, y + 1, 2, 1);
+        ctx.fillRect(x + 15, y - 1, 2, 1);
+      }
+
+      ctx.save();
+      if (dog.dir < 0) {
+        ctx.translate(x + TILE, y);
+        ctx.scale(-1, 1);
+        ctx.drawImage(sprite, 0, 0);
+        ctx.restore();
+      } else {
+        ctx.drawImage(sprite, x, y);
+        ctx.restore();
+      }
+    }
+
+    for (const vendor of world.vendors) {
+      if (vendor.row < first || vendor.row > last) continue;
+      const sprite = getVendorSprite();
+      const top = this.screenY(vendor.row, camPx);
+      const x = Math.round(vendor.x);
+      const y = top + TILE - sprite.height + 2;
+      if (y > STAGE_HEIGHT || y + sprite.height < 0) continue;
+
+      ctx.save();
+      if (vendor.dir < 0) {
+        ctx.translate(x + sprite.width, y);
+        ctx.scale(-1, 1);
+        ctx.drawImage(sprite, 0, 0);
+        ctx.restore();
+      } else {
+        ctx.drawImage(sprite, x, y);
+        ctx.restore();
+      }
     }
   }
 
@@ -391,6 +559,14 @@ export class Renderer {
         ctx.fillRect(x - 1, y + 7, 2, 2);
         ctx.fillRect(x + 19, y + 10, 2, 2);
         ctx.fillRect(x + 8, y - 2, 2, 2);
+        ctx.globalAlpha = 1;
+      } else if (pickup.kind !== 'fishball' && pickup.kind !== 'kikiam') {
+        const pulse = 0.4 + Math.sin(engine.time * 4.4 + pickup.row) * 0.3;
+        ctx.globalAlpha = Math.max(0.12, pulse);
+        ctx.fillStyle = COLORS.aqua;
+        ctx.fillRect(x + 1, y + 9, 2, 2);
+        ctx.fillRect(x + 17, y + 6, 2, 2);
+        ctx.fillRect(x + 9, y - 1, 2, 2);
         ctx.globalAlpha = 1;
       }
 
@@ -444,7 +620,7 @@ export class Renderer {
     }
 
     const frame: 0 | 1 = Math.floor(engine.time * (engine.phase === 'playing' ? 4.5 : 3)) % 2 === 0 ? 0 : 1;
-    ctx.drawImage(getCatSprite(frame), x, y);
+    ctx.drawImage(getCatSprite(frame, this.skin), x, y);
 
     if (engine.phase === 'dying') {
       ctx.fillStyle = COLORS.paper;

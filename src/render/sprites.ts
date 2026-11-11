@@ -118,15 +118,55 @@ export const CAT_SPRITE_SIZE = 16;
 export const CAT_DRAW_OFFSET_X = 2;
 export const CAT_DRAW_OFFSET_Y = 4;
 
-export function getCatSprite(frame: 0 | 1): HTMLCanvasElement {
-  return cachedSprite(`cat-${frame}`, CAT_SPRITE_SIZE, CAT_SPRITE_SIZE, (ctx) => {
+export type CatSkin = 'mingming' | 'puti' | 'pula' | 'dilaw' | 'luntian' | 'tala';
+
+export const CAT_SKIN_NAMES: readonly CatSkin[] = ['mingming', 'puti', 'pula', 'dilaw', 'luntian', 'tala'];
+
+interface CatPalette {
+  body: string;
+  inner: string;
+  /** Set for light coats; exposed body pixels edge with ink for contrast. */
+  outline?: string;
+}
+
+// body and inner replace the ink and ear roles of the default cat.
+const CAT_SKINS: Readonly<Record<CatSkin, CatPalette>> = {
+  mingming: { body: COLORS.cat, inner: COLORS.pinkSoft },
+  puti: { body: '#efe9dc', inner: COLORS.pinkSoft, outline: COLORS.ink },
+  pula: { body: COLORS.coral, inner: COLORS.paper, outline: COLORS.ink },
+  dilaw: { body: COLORS.sun, inner: COLORS.paper, outline: COLORS.ink },
+  luntian: { body: COLORS.teal, inner: COLORS.aqua, outline: COLORS.ink },
+  tala: { body: COLORS.purple, inner: COLORS.pink, outline: COLORS.ink },
+};
+
+export function getCatSprite(frame: 0 | 1, skin: CatSkin = 'mingming'): HTMLCanvasElement {
+  const palette = CAT_SKINS[skin] ?? CAT_SKINS.mingming;
+  if (!palette) throw new Error('Missing cat skin palette');
+  return cachedSprite(`cat-${skin}-${frame}`, CAT_SPRITE_SIZE, CAT_SPRITE_SIZE, (ctx) => {
     const tail = TAIL_FRAMES[frame] ?? TAIL_FRAMES[0] ?? [];
-    for (const [x, y] of tail) rect(ctx, x, y, 2, 2, COLORS.cat);
+    // The tail keeps the coat color; only outlined coats ink its outer tip so a
+    // pale cat still reads against the sidewalk.
+    for (const [index, [x, y]] of tail.entries()) {
+      const inkTip = palette.outline !== undefined && index === tail.length - 1;
+      rect(ctx, x, y, 2, 2, inkTip ? COLORS.ink : palette.body);
+    }
 
     for (let y = 0; y < CAT_ART.length; y += 1) {
       const line = CAT_ART[y] ?? '';
       for (let x = 0; x < line.length; x += 1) {
-        const color = CAT_PALETTE[line.charAt(x)];
+        const code = line.charAt(x);
+        if (code === 'k') {
+          // Light coats read as blobs on pale sidewalks; outline exposed edges
+          // with ink, the same way the default black cat reads by silhouette.
+          const exposed =
+            (CAT_ART[y - 1]?.charAt(x) ?? '.') === '.' ||
+            (CAT_ART[y + 1]?.charAt(x) ?? '.') === '.' ||
+            (line.charAt(x - 1) || '.') === '.' ||
+            (line.charAt(x + 1) || '.') === '.';
+          rect(ctx, x, y, 1, 1, palette.outline && exposed ? COLORS.ink : palette.body);
+          continue;
+        }
+        const color = code === 'p' ? palette.inner : code === 'e' ? COLORS.catEye : code === 'w' ? COLORS.catGlint : CAT_PALETTE[code];
         if (color) rect(ctx, x, y, 1, 1, color);
       }
     }
@@ -628,21 +668,182 @@ function drawPole(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 8, 38, 3, 1, COLORS.red);
 }
 
+// --- Shared shapes for side-view actors ---
+
+function drawDogSide(ctx: CanvasRenderingContext2D): void {
+  rect(ctx, 4, 20, 12, 2, COLORS.shadow);
+
+  rect(ctx, 3, 6, 14, 9, COLORS.ink);
+  rect(ctx, 4, 7, 12, 7, COLORS.metal);
+  rect(ctx, 4, 7, 12, 1, '#e6e2ea');
+
+  rect(ctx, 14, 2, 5, 6, COLORS.ink);
+  rect(ctx, 15, 3, 3, 4, COLORS.metal);
+  rect(ctx, 18, 5, 2, 2, COLORS.ink);
+
+  rect(ctx, 2, 9, 3, 3, COLORS.ink);
+  rect(ctx, 2, 10, 2, 1, COLORS.metalDark);
+
+  rect(ctx, 4, 10, 2, 2, COLORS.hair);
+  rect(ctx, 8, 10, 2, 2, COLORS.hair);
+  rect(ctx, 6, 13, 3, 2, COLORS.ink);
+
+  rect(ctx, 4, 15, 3, 5, COLORS.ink);
+  rect(ctx, 12, 15, 3, 5, COLORS.ink);
+  rect(ctx, 5, 15, 1, 4, COLORS.metalDark);
+  rect(ctx, 13, 15, 1, 4, COLORS.metalDark);
+  rect(ctx, 4, 19, 3, 1, COLORS.paper);
+  rect(ctx, 12, 19, 3, 1, COLORS.paper);
+
+  rect(ctx, 1, 4, 3, 4, COLORS.ink);
+  rect(ctx, 1, 6, 2, 2, COLORS.metalDark);
+}
+
+function drawVendorSide(ctx: CanvasRenderingContext2D): void {
+  rect(ctx, 4, 20, 24, 2, COLORS.shadow);
+
+  rect(ctx, 0, 6, 20, 9, COLORS.ink);
+  rect(ctx, 1, 7, 18, 7, COLORS.amber);
+  rect(ctx, 1, 7, 18, 1, COLORS.sun);
+
+  rect(ctx, 4, 9, 12, 3, COLORS.glass);
+  rect(ctx, 4, 9, 12, 1, COLORS.glassLight);
+
+  rect(ctx, 0, 15, 20, 4, COLORS.ink);
+  rect(ctx, 1, 16, 18, 2, COLORS.wood);
+  rect(ctx, 2, 16, 2, 2, COLORS.woodLight);
+
+  rect(ctx, 20, 3, 6, 6, COLORS.ink);
+  rect(ctx, 21, 4, 4, 4, COLORS.skin);
+  rect(ctx, 20, 3, 6, 1, COLORS.hair);
+  rect(ctx, 25, 5, 1, 1, COLORS.hair);
+
+  rect(ctx, 21, 9, 4, 4, COLORS.red);
+  rect(ctx, 22, 13, 2, 6, COLORS.woodDark);
+
+  rect(ctx, 2, 19, 3, 2, COLORS.ink);
+  rect(ctx, 15, 19, 3, 2, COLORS.ink);
+}
+
+function drawTrikeParked(ctx: CanvasRenderingContext2D, variant: number): void {
+  const palette = VEHICLE_PALETTES[Math.abs(variant) % VEHICLE_PALETTES.length] ?? VEHICLE_PALETTES[0];
+  if (!palette) throw new Error('Missing vehicle palette');
+
+  rect(ctx, 3, 18, 34, 2, COLORS.shadow);
+
+  rect(ctx, 2, 5, 18, 6, COLORS.ink);
+  rect(ctx, 3, 6, 16, 4, palette.body);
+  rect(ctx, 4, 2, 14, 3, COLORS.ink);
+  rect(ctx, 5, 3, 12, 1, palette.roof);
+  rect(ctx, 5, 7, 10, 3, COLORS.glass);
+  rect(ctx, 5, 7, 10, 1, COLORS.glassLight);
+
+  rect(ctx, 18, 9, 5, 6, COLORS.ink);
+  rect(ctx, 19, 10, 3, 4, palette.body);
+  rect(ctx, 18, 8, 5, 1, COLORS.woodDark);
+
+  rect(ctx, 23, 5, 3, 9, COLORS.ink);
+  rect(ctx, 24, 6, 1, 7, COLORS.metalDark);
+
+  rect(ctx, 4, 13, 8, 4, COLORS.ink);
+  rect(ctx, 5, 14, 6, 2, COLORS.metalDark);
+  rect(ctx, 6, 15, 2, 1, COLORS.metal);
+  rect(ctx, 20, 13, 7, 4, COLORS.ink);
+  rect(ctx, 21, 14, 5, 2, COLORS.metalDark);
+  rect(ctx, 22, 15, 2, 1, COLORS.metal);
+}
+
+function drawStall(ctx: CanvasRenderingContext2D, variant: number): void {
+  const cloth = [COLORS.pink, COLORS.aqua, COLORS.sun][Math.abs(variant) % 3] ?? COLORS.pink;
+  const clothAlt = [COLORS.paper, COLORS.paper, COLORS.red][Math.abs(variant) % 3] ?? COLORS.paper;
+
+  rect(ctx, 3, 18, 34, 2, COLORS.shadow);
+
+  rect(ctx, 2, 0, 36, 6, COLORS.ink);
+  rect(ctx, 3, 1, 34, 3, cloth);
+  for (let index = 0; index < 8; index += 1) {
+    const x = 4 + index * 4;
+    if (index % 2 === 0) rect(ctx, x, 1, 4, 3, clothAlt);
+  }
+  rect(ctx, 3, 5, 34, 1, COLORS.ink);
+  rect(ctx, 4, 6, 2, 8, COLORS.woodDark);
+  rect(ctx, 33, 6, 2, 8, COLORS.woodDark);
+
+  rect(ctx, 4, 10, 32, 7, COLORS.ink);
+  rect(ctx, 5, 11, 30, 5, COLORS.wood);
+  rect(ctx, 5, 11, 30, 1, COLORS.woodLight);
+
+  const goods = [COLORS.coral, COLORS.lime, COLORS.sun, COLORS.amber, COLORS.green];
+  for (let index = 0; index < 9; index += 1) {
+    const x = 7 + index * 3;
+    rect(ctx, x, 11, 2, 2, goods[index % goods.length] ?? COLORS.sun);
+  }
+
+  rect(ctx, 4, 16, 32, 2, COLORS.woodDark);
+}
+
+function drawSacks(ctx: CanvasRenderingContext2D, variant: number): void {
+  const tint = [COLORS.paper, '#e8dcb8', COLORS.amber][Math.abs(variant) % 3] ?? COLORS.paper;
+
+  rect(ctx, 3, 18, 14, 2, COLORS.shadow);
+
+  rect(ctx, 2, 7, 12, 11, COLORS.ink);
+  rect(ctx, 3, 8, 10, 9, tint);
+  rect(ctx, 4, 10, 8, 1, COLORS.inkSoft);
+  rect(ctx, 3, 14, 10, 1, COLORS.inkSoft);
+
+  rect(ctx, 4, 4, 8, 4, COLORS.ink);
+  rect(ctx, 5, 5, 6, 2, tint);
+  rect(ctx, 6, 4, 4, 1, COLORS.inkSoft);
+
+  rect(ctx, 4, 11, 3, 1, COLORS.paper);
+  rect(ctx, 6, 16, 3, 1, COLORS.paper);
+}
+
+function drawBarricade(ctx: CanvasRenderingContext2D): void {
+  rect(ctx, 3, 17, 14, 2, COLORS.shadow);
+
+  rect(ctx, 1, 6, 3, 11, COLORS.ink);
+  rect(ctx, 16, 6, 3, 11, COLORS.ink);
+  rect(ctx, 1, 15, 3, 2, COLORS.red);
+  rect(ctx, 16, 15, 3, 2, COLORS.red);
+
+  for (let index = 0; index < 5; index += 1) {
+    const x = 2 + index * 3;
+    rect(ctx, x, 4 + (index % 2) * 3, 4, 3, index % 2 === 0 ? COLORS.coral : COLORS.paper);
+  }
+  rect(ctx, 0, 4, 20, 1, COLORS.ink);
+  rect(ctx, 0, 12, 20, 1, COLORS.ink);
+  rect(ctx, 2, 8, 16, 1, COLORS.ink);
+}
+
 export function getPropSprite(kind: PropKind, variant = 0): HTMLCanvasElement {
   const width = PROP_WIDTH[kind] * TILE;
   const height = kind === 'pole' ? 48 : TILE;
-  const variantIndex = kind === 'store' || kind === 'cart' || kind === 'crates' || kind === 'bench' ? Math.abs(variant) % 3 : 0;
+  const variantIndex = kind === 'store' || kind === 'cart' || kind === 'crates' || kind === 'bench' || kind === 'stall' || kind === 'sacks' || kind === 'trikePark' ? Math.abs(variant) % 3 : 0;
   return cachedSprite(`prop-${kind}-${variantIndex}`, width, height, (ctx) => {
     if (kind === 'store') drawStore(ctx, variantIndex);
     else if (kind === 'cart') drawCart(ctx, variantIndex);
     else if (kind === 'crates') drawCrates(ctx, variantIndex);
     else if (kind === 'bench') drawBench(ctx, variantIndex);
+    else if (kind === 'stall') drawStall(ctx, variantIndex);
+    else if (kind === 'sacks') drawSacks(ctx, variantIndex);
+    else if (kind === 'trikePark') drawTrikeParked(ctx, variantIndex);
+    else if (kind === 'barricade') drawBarricade(ctx);
     else if (kind === 'chairs') drawChairs(ctx);
     else if (kind === 'trash') drawTrash(ctx);
     else if (kind === 'plant') drawPlant(ctx);
     else if (kind === 'sign') drawSign(ctx);
     else drawPole(ctx);
   });
+}
+
+export function getDogSprite(): HTMLCanvasElement {
+  return cachedSprite('dog', TILE, TILE + 6, drawDogSide);
+}
+
+export function getVendorSprite(): HTMLCanvasElement {
+  return cachedSprite('vendor', 32, 24, drawVendorSide);
 }
 
 function drawBall(ctx: CanvasRenderingContext2D, cx: number, cy: number, body: string, shine: string): void {
@@ -716,11 +917,130 @@ function drawAnting(ctx: CanvasRenderingContext2D): void {
   rect(ctx, 7, 15, 2, 1, COLORS.amber);
 }
 
+// --- Power-up items ---
+
+function drawEnforcer(ctx: CanvasRenderingContext2D): void {
+  // Traffic enforcer whistle on a lanyard.
+  rect(ctx, 8, 1, 4, 3, COLORS.ink);
+  rect(ctx, 9, 0, 2, 2, COLORS.blue);
+
+  rect(ctx, 7, 4, 6, 6, COLORS.ink);
+  rect(ctx, 8, 5, 4, 4, COLORS.metal);
+  rect(ctx, 8, 5, 4, 1, '#e6e2ea');
+  rect(ctx, 13, 6, 3, 2, COLORS.ink);
+  rect(ctx, 14, 5, 2, 2, COLORS.metalDark);
+  rect(ctx, 9, 6, 2, 1, COLORS.aqua);
+
+  rect(ctx, 8, 10, 1, 4, COLORS.red);
+  rect(ctx, 11, 10, 1, 4, COLORS.teal);
+  rect(ctx, 9, 14, 2, 3, COLORS.ink);
+  rect(ctx, 8, 17, 4, 2, COLORS.ink);
+}
+
+function drawPayong(ctx: CanvasRenderingContext2D): void {
+  // Closed umbrella.
+  rect(ctx, 9, 0, 2, 3, COLORS.paper);
+  for (let index = 0; index < 14; index += 1) {
+    rect(ctx, 8 + (index % 3) - 1, 3 + index, 3, 1, index % 4 === 0 ? COLORS.blue : COLORS.aqua);
+  }
+  rect(ctx, 7, 6, 6, 1, COLORS.ink);
+  rect(ctx, 8, 11, 4, 1, COLORS.ink);
+  rect(ctx, 9, 17, 4, 2, COLORS.ink);
+  rect(ctx, 12, 16, 2, 2, COLORS.wood);
+}
+
+function drawTsinelas(ctx: CanvasRenderingContext2D): void {
+  // A pair of rubber slippers.
+  rect(ctx, 2, 5, 7, 12, COLORS.ink);
+  rect(ctx, 3, 6, 5, 10, COLORS.blue);
+  rect(ctx, 4, 8, 1, 6, COLORS.paper);
+  rect(ctx, 3, 12, 5, 1, COLORS.aqua);
+
+  rect(ctx, 11, 5, 7, 12, COLORS.ink);
+  rect(ctx, 12, 6, 5, 10, COLORS.coral);
+  rect(ctx, 13, 8, 1, 6, COLORS.paper);
+  rect(ctx, 12, 12, 5, 1, COLORS.pink);
+}
+
+function drawHalohalo(ctx: CanvasRenderingContext2D): void {
+  // Tall glass with layered sweets, spoon, and cherry.
+  rect(ctx, 5, 2, 2, 3, COLORS.ink);
+  rect(ctx, 5, 4, 6, 1, COLORS.metal);
+
+  rect(ctx, 5, 5, 10, 12, COLORS.ink);
+  rect(ctx, 6, 6, 8, 10, COLORS.glass);
+  rect(ctx, 6, 6, 8, 3, COLORS.paper);
+  rect(ctx, 6, 9, 8, 3, COLORS.pink);
+  rect(ctx, 6, 12, 8, 2, COLORS.lime);
+  rect(ctx, 6, 14, 8, 2, COLORS.amber);
+  rect(ctx, 8, 5, 2, 2, COLORS.coral);
+  rect(ctx, 13, 3, 2, 2, COLORS.red);
+
+  rect(ctx, 4, 17, 12, 2, COLORS.ink);
+}
+
+function drawBalut(ctx: CanvasRenderingContext2D): void {
+  // Balut egg in a small basket.
+  rect(ctx, 5, 6, 10, 10, COLORS.ink);
+  rect(ctx, 6, 7, 8, 8, '#e8c88f');
+  rect(ctx, 6, 7, 8, 1, '#f2dda9');
+  rect(ctx, 8, 9, 4, 3, '#c89a5e');
+  rect(ctx, 9, 10, 2, 1, '#8a5f36');
+
+  rect(ctx, 7, 3, 6, 4, COLORS.ink);
+  rect(ctx, 8, 4, 4, 2, COLORS.paper);
+  rect(ctx, 9, 3, 2, 1, COLORS.woodLight);
+
+  rect(ctx, 4, 16, 12, 2, COLORS.wood);
+  rect(ctx, 5, 17, 1, 2, COLORS.woodDark);
+  rect(ctx, 14, 17, 1, 2, COLORS.woodDark);
+}
+
+function drawTuron(ctx: CanvasRenderingContext2D): void {
+  // Two golden banana rolls with a paper wrapper.
+  rect(ctx, 3, 8, 14, 8, COLORS.ink);
+  rect(ctx, 4, 9, 12, 6, COLORS.amber);
+  rect(ctx, 4, 9, 12, 2, COLORS.sun);
+  rect(ctx, 6, 11, 2, 2, COLORS.paper);
+
+  rect(ctx, 6, 3, 12, 6, COLORS.ink);
+  rect(ctx, 7, 4, 10, 4, COLORS.amber);
+  rect(ctx, 7, 4, 10, 1, COLORS.sun);
+  rect(ctx, 9, 6, 2, 1, COLORS.paper);
+  rect(ctx, 16, 2, 2, 3, COLORS.woodDark);
+
+  rect(ctx, 2, 16, 16, 2, COLORS.paper);
+  rect(ctx, 2, 17, 16, 1, '#e2d7bd');
+}
+
+function drawSampaguita(ctx: CanvasRenderingContext2D): void {
+  // Necklace of white buds on a string.
+  for (let index = 0; index < 5; index += 1) {
+    const x = 2 + index * 3;
+    const y = 4 + Math.round(Math.sin((index / 4) * Math.PI) * 3);
+    rect(ctx, x, y + 2, 3, 3, COLORS.ink);
+    rect(ctx, x, y + 2, 3, 1, COLORS.paper);
+    rect(ctx, x + 1, y + 2, 1, 2, COLORS.paper);
+    rect(ctx, x + 1, y + 4, 1, 1, COLORS.sun);
+  }
+  rect(ctx, 6, 2, 8, 2, COLORS.ink);
+  rect(ctx, 7, 2, 6, 1, COLORS.red);
+  rect(ctx, 8, 12, 4, 4, COLORS.ink);
+  rect(ctx, 9, 13, 2, 2, COLORS.sun);
+}
+
 export function getPickupSprite(kind: PickupKind): HTMLCanvasElement {
   return cachedSprite(`pickup-${kind}`, TILE, TILE, (ctx) => {
     if (kind === 'fishball') drawFishball(ctx);
     else if (kind === 'kikiam') drawKikiam(ctx);
-    else drawAnting(ctx);
+    else if (kind === 'anting') drawAnting(ctx);
+    else if (kind === 'enforcer') drawEnforcer(ctx);
+    else if (kind === 'payong') drawPayong(ctx);
+    else if (kind === 'tsinelas') drawTsinelas(ctx);
+    else if (kind === 'halohalo') drawHalohalo(ctx);
+    else if (kind === 'balut') drawBalut(ctx);
+    else if (kind === 'turon') drawTuron(ctx);
+    else drawSampaguita(ctx);
   });
 }
 
