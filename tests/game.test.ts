@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { Engine } from '../src/game/engine';
 import { mulberry32 } from '../src/game/rng';
 import {
+  COLS,
   PICKUP_BONUS,
+  POWER_KINDS,
   SCENE_ORDER,
   START_COL,
   START_ROW,
@@ -324,5 +326,338 @@ describe('Kalsada-Cat engine', () => {
 
     run(engine, 1.7);
     expect(engine.phase).toBe('dying');
+  });
+
+  it('covers all six districts as the world grows', () => {
+    const world = new World(mulberry32(31337));
+    world.ensure(400);
+    const seen = new Set(world.themes);
+    for (const theme of SCENE_ORDER) expect(seen.has(theme)).toBe(true);
+    expect(SCENE_ORDER).toHaveLength(6);
+  });
+
+  it('spawns every power-up kind across a long run', () => {
+    const kinds = new Set<string>();
+    for (let seed = 1; seed <= 24 && kinds.size < POWER_KINDS.length + 3; seed += 1) {
+      const world = new World(mulberry32(seed * 7919));
+      world.ensure(600);
+      for (const pickup of world.pickups) kinds.add(pickup.kind);
+    }
+
+    for (const kind of ['fishball', 'kikiam', 'anting'] as const) expect(kinds.has(kind)).toBe(true);
+    for (const kind of POWER_KINDS) expect(kinds.has(kind)).toBe(true);
+  });
+
+  it('never spawns power-ups in the first 20 rows', () => {
+    const world = new World(mulberry32(6060));
+    world.ensure(300);
+    for (const pickup of world.pickups) {
+      if (pickup.kind === 'fishball' || pickup.kind === 'kikiam' || pickup.kind === 'anting') continue;
+      expect(pickup.row).toBeGreaterThanOrEqual(20);
+    }
+  });
+
+  it('keeps dogs inside their patrol run', () => {
+    const world = new World(mulberry32(7171));
+    world.ensure(400);
+    expect(world.dogs.length).toBeGreaterThan(0);
+
+    for (let tick = 0; tick < 600; tick += 1) world.update(1 / 30, false, false);
+
+    for (const dog of world.dogs) {
+      expect(dog.pos).toBeGreaterThanOrEqual(dog.minCol - 0.001);
+      expect(dog.pos).toBeLessThanOrEqual(dog.maxCol + 0.001);
+    }
+  });
+
+  it('freezes dogs and vendors while time is frozen', () => {
+    const world = new World(mulberry32(8282));
+    world.ensure(400);
+    expect(world.dogs.length + world.vendors.length).toBeGreaterThan(0);
+
+    const before = world.dogs.map((dog) => dog.pos);
+    const vendorBefore = world.vendors.map((vendor) => vendor.x);
+    for (let tick = 0; tick < 60; tick += 1) world.update(1 / 30, true, false);
+
+    world.dogs.forEach((dog, index) => {
+      expect(dog.pos).toBe(before[index]);
+    });
+    world.vendors.forEach((vendor, index) => {
+      expect(vendor.x).toBe(vendorBefore[index]);
+    });
+  });
+
+  it('clears barricades after their timer and frees the tile', () => {
+    const world = new World(mulberry32(9090));
+    world.ensure(600);
+    const barricades = world.props.filter((prop) => prop.kind === 'barricade');
+    expect(barricades.length).toBeGreaterThan(0);
+    const first = barricades[0];
+    if (!first) return;
+
+    // Off-screen barricades hold their timer: nothing burns down while it waits.
+    world.update(1, false, false, 0, 3);
+    expect(world.blockedAt(first.col, first.row)).toBe(true);
+
+    for (let tick = 0; tick < 60 * 12; tick += 1) world.update(1 / 60, false, false, first.row, first.row);
+
+    expect(world.blockedAt(first.col, first.row)).toBe(false);
+    expect(world.props.includes(first)).toBe(false);
+  });
+
+  it('marks lubak only on road rows', () => {
+    const world = new World(mulberry32(12321));
+    world.ensure(400);
+    expect(world.lubak.size).toBeGreaterThan(0);
+    for (const key of world.lubak) {
+      const [colText, rowText] = key.split(',');
+      const col = Number(colText);
+      const row = Number(rowText);
+      expect(world.rows[row]).toBe('road');
+      expect(col).toBeGreaterThanOrEqual(0);
+      expect(col).toBeLessThan(COLS);
+    }
+  });
+
+  it('pulls fishballs to the cat with the magnet active', () => {
+    const world = new World(mulberry32(55));
+    world.ensure(400);
+
+    // Clear a 5x5 room around the cat and drop a fishball two tiles away.
+    for (const prop of [...world.props].filter((prop) => Math.abs(prop.col - 6) <= 3 && Math.abs(prop.row - 30) <= 3)) {
+      world['removeProp'](prop);
+    }
+    for (let row = 27; row <= 33; row += 1) {
+      for (let col = 3; col <= 9; col += 1) {
+        const key = `${col},${row}`;
+        world['pickupTiles'].delete(key);
+        const index = world.pickups.findIndex((pickup) => pickup.col === col && pickup.row === row);
+        if (index >= 0) world.pickups.splice(index, 1);
+      }
+    }
+
+    const fishball = { kind: 'fishball' as const, col: 8, row: 30 };
+    world.pickups.push(fishball);
+    world['pickupTiles'].set('8,30', fishball);
+
+    expect(world.pullFishballs(6, 30, 2)).toHaveLength(0);
+    expect(fishball.col).toBe(7);
+
+    const collected = world.pullFishballs(6, 30, 2);
+    expect(collected).toHaveLength(1);
+    expect(collected[0]?.kind).toBe('fishball');
+    expect(world.pickups.includes(fishball)).toBe(false);
+  });
+});
+
+describe('Kalsada-Cat powers', () => {
+  it('freezes traffic and dogs while the enforcer whistle runs', () => {
+    const engine = new Engine({ rng: mulberry32(31) });
+    engine.start();
+    emptyLanes(engine);
+
+    engine.applyPowerForTest('enforcer');
+    const lane = engine.world.laneAt(3);
+    expect(lane).toBeDefined();
+    if (!lane) return;
+    lane.speed = 30;
+    lane.dir = 1;
+    lane.vehicles = [{ kind: 'jeepney', variant: 0, x: 60, width: VEHICLE_WIDTH.jeepney }];
+    const x = lane.vehicles[0]?.x ?? 0;
+
+    run(engine, 0.5);
+    expect(lane.vehicles[0]?.x).toBe(x);
+    expect(engine.freezeTimer).toBeGreaterThan(0);
+
+    run(engine, 4);
+    expect(engine.freezeTimer).toBe(0);
+    const after = lane.vehicles[0]?.x ?? 0;
+    run(engine, 0.25);
+    expect(lane.vehicles[0]?.x).not.toBe(after);
+  });
+
+  it('halves hop duration with tsinelas and restores it after', () => {
+    const engine = new Engine({ rng: mulberry32(32) });
+    engine.start();
+    emptyLanes(engine);
+
+    engine.applyPowerForTest('tsinelas');
+    const startRow = engine.player.row;
+    engine.move('up');
+    run(engine, 0.06);
+    expect(engine.player.row).toBe(startRow + 1);
+
+    run(engine, 6);
+    expect(engine.speedTimer).toBe(0);
+    engine.move('up');
+    run(engine, 0.06);
+    expect(engine.player.hop).toBeLessThan(1);
+  });
+
+  it('doubles pickup points while halo-halo is active', () => {
+    const engine = new Engine({ rng: mulberry32(33) });
+    engine.start();
+    emptyLanes(engine);
+
+    engine.applyPowerForTest('halohalo');
+    const fishball = engine.world.pickups.find((pickup) => pickup.kind === 'fishball');
+    expect(fishball).toBeDefined();
+    if (!fishball) return;
+
+    engine.player.col = fishball.col;
+    engine.player.fromCol = fishball.col;
+    engine.player.row = fishball.row;
+    engine.player.fromRow = fishball.row;
+    engine.player.hop = 0.99;
+    const previousScore = engine.score;
+
+    engine.update(0.02);
+    expect(engine.score).toBe(previousScore + PICKUP_BONUS.fishball * 2);
+  });
+
+  it('absorbs one hit with payong before shields are touched', () => {
+    const engine = new Engine({ rng: mulberry32(34) });
+    engine.start();
+    emptyLanes(engine);
+
+    engine.move('up');
+    run(engine, 0.13);
+    engine.move('up');
+    run(engine, 0.13);
+
+    const lane = engine.world.laneAt(3);
+    expect(lane).toBeDefined();
+    if (!lane) return;
+    lane.speed = 0;
+    lane.vehicles.push({ kind: 'jeepney', variant: 2, x: engine.player.col * TILE - 20, width: 58 });
+    engine.applyPowerForTest('payong');
+    engine.shields = 1;
+
+    engine.update(1 / 60);
+    expect(engine.phase).toBe('playing');
+    expect(engine.payong).toBe(false);
+    expect(engine.shields).toBe(1);
+    expect(engine.drainEvents().some((event) => event.type === 'payong-break')).toBe(true);
+  });
+
+  it('revives once with balut, then dies on the next hit', () => {
+    const engine = new Engine({ rng: mulberry32(35) });
+    engine.start();
+    emptyLanes(engine);
+
+    engine.move('up');
+    run(engine, 0.13);
+    engine.move('up');
+    run(engine, 0.13);
+
+    const lane = engine.world.laneAt(3);
+    expect(lane).toBeDefined();
+    if (!lane) return;
+    lane.speed = 0;
+    lane.vehicles.push({ kind: 'jeepney', variant: 3, x: engine.player.col * TILE - 20, width: 58 });
+    engine.applyPowerForTest('balut');
+
+    engine.update(1 / 60);
+    expect(engine.phase).toBe('playing');
+    expect(engine.drainEvents().some((event) => event.type === 'revive')).toBe(true);
+
+    run(engine, 2.1);
+    engine.update(1 / 60);
+    expect(engine.phase).toBe('dying');
+  });
+
+  it('stumbles on lubak without taking damage', () => {
+    const engine = new Engine({ rng: mulberry32(36) });
+    engine.start();
+    emptyLanes(engine);
+
+    engine.world.ensure(400);
+    emptyLanes(engine);
+    const pothole = [...engine.world.lubak][0];
+    expect(pothole).toBeDefined();
+    if (!pothole) return;
+    const [potholeColText = '6', potholeRowText = '2'] = pothole.split(',');
+    const potholeCol = Number(potholeColText);
+    const potholeRow = Number(potholeRowText);
+    engine.player.col = potholeCol;
+    engine.player.fromCol = potholeCol;
+    engine.player.row = potholeRow;
+    engine.player.fromRow = potholeRow;
+    engine.player.hop = 0.99;
+
+    engine.update(0.02);
+    expect(engine.stumble).toBeGreaterThan(0);
+    expect(engine.phase).toBe('playing');
+    expect(engine.drainEvents().some((event) => event.type === 'stumble')).toBe(true);
+  });
+
+  it('calms dogs with sampaguita so they stop moving', () => {
+    const world = new World(mulberry32(37));
+    world.ensure(400);
+    expect(world.dogs.length).toBeGreaterThan(0);
+
+    const before = world.dogs.map((dog) => dog.pos);
+    for (let tick = 0; tick < 60; tick += 1) world.update(1 / 60, false, true);
+
+    world.dogs.forEach((dog, index) => {
+      expect(dog.pos).toBe(before[index]);
+    });
+  });
+
+  it('lets the cat walk through a calm dog without damage', () => {
+    const engine = new Engine({ rng: mulberry32(39) });
+    engine.start();
+    emptyLanes(engine);
+
+    engine.world.ensure(400);
+    emptyLanes(engine);
+    const dog = engine.world.dogs[0];
+    expect(dog).toBeDefined();
+    if (!dog) return;
+
+    engine.applyPowerForTest('sampaguita');
+    engine.player.col = Math.round(dog.pos);
+    engine.player.fromCol = engine.player.col;
+    engine.player.row = dog.row;
+    engine.player.fromRow = dog.row;
+    engine.player.hop = 1;
+
+    run(engine, 0.2);
+    expect(engine.phase).toBe('playing');
+
+    engine.calmTimer = 0;
+    run(engine, 0.2);
+    expect(engine.phase).toBe('dying');
+  });
+
+  it('shows held payong and balut charges as chips', () => {
+    const engine = new Engine({ rng: mulberry32(40) });
+    engine.start();
+
+    expect(engine.effectChips()).toHaveLength(0);
+
+    engine.applyPowerForTest('payong');
+    const withUmbrella = engine.effectChips();
+    expect(withUmbrella).toHaveLength(1);
+    expect(withUmbrella[0]).toMatchObject({ kind: 'payong', seconds: 0 });
+
+    engine.applyPowerForTest('balut');
+    const both = engine.effectChips();
+    expect(both.map((chip) => chip.kind).sort()).toEqual(['balut', 'payong']);
+    for (const chip of both) expect(chip.seconds).toBe(0);
+  });
+
+  it('attracts fishballs with turon for its timer window', () => {
+    const engine = new Engine({ rng: mulberry32(38) });
+    engine.start();
+    emptyLanes(engine);
+
+    engine.applyPowerForTest('turon');
+    expect(engine.magnetTimer).toBeGreaterThan(0);
+    expect(engine.effectChips().some((chip) => chip.kind === 'turon')).toBe(true);
+
+    run(engine, 8.2);
+    expect(engine.magnetTimer).toBe(0);
+    expect(engine.effectChips().some((chip) => chip.kind === 'turon')).toBe(false);
   });
 });
