@@ -617,7 +617,6 @@ export class Engine {
   }
 
   private spawnBurst(row: number, spread: number, colors: readonly string[], count: number, life: number): void {
-    const color = choose(this.rng, colors) ?? '#f6efdf';
     for (let index = 0; index < count; index += 1) {
       const angle = this.rng() * Math.PI * 2;
       const speed = 0.4 + this.rng() * 1.8;
@@ -629,7 +628,7 @@ export class Engine {
         life,
         maxLife: life,
         size: this.rng() < 0.5 ? 1 : 2,
-        color,
+        color: choose(this.rng, colors) ?? '#f6efdf',
       });
     }
   }
