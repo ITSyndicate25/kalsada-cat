@@ -591,6 +591,39 @@ describe('Kalsada-Cat powers', () => {
     expect(engine.drainEvents().some((event) => event.type === 'stumble')).toBe(true);
   });
 
+  it('holds the cat on a pothole and keeps the buffered hop', () => {
+    const engine = new Engine({ rng: mulberry32(36) });
+    engine.start();
+    emptyLanes(engine);
+    engine.world.ensure(400);
+    emptyLanes(engine);
+
+    const pothole = [...engine.world.lubak][0];
+    expect(pothole).toBeDefined();
+    if (!pothole) return;
+    const [colText = '6', rowText = '2'] = pothole.split(',');
+    const col = Number(colText);
+    const row = Number(rowText);
+    engine.player.col = col;
+    engine.player.fromCol = col;
+    engine.player.row = row;
+    engine.player.fromRow = row;
+    engine.player.hop = 0.99;
+
+    engine.update(1 / 60);
+    expect(engine.stumble).toBeGreaterThan(0);
+
+    // Input during the hold is buffered, never executed on the spot.
+    engine.move('up');
+    expect(engine.player.row).toBe(row);
+
+    run(engine, 0.1);
+    expect(engine.player.row).toBe(row);
+
+    run(engine, 0.1);
+    expect(engine.player.row).toBe(row + 1);
+  });
+
   it('calms dogs with sampaguita so they stop moving', () => {
     const world = new World(mulberry32(37));
     world.ensure(400);

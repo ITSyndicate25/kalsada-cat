@@ -48,7 +48,7 @@ The game buffers one movement input while a hop finishes. Static props block the
 | --- | --- |
 | Aso (stray dog) | Patrols a two-to-four tile run on a sidewalk island. Contact hits like a vehicle. Sampaguita calms every dog for 8 s, and a calm dog cannot hurt the cat. |
 | Taho vendor | Walks one sidewalk row from edge to edge on a loop, carrying a cart. Contact hits; the vendor never spawns inside the stage. |
-| Lubak / baha | A pothole or flood patch on a road tile. Landing on it holds the cat for 150 ms before the next hop. It never deals damage. |
+| Lubak / baha | A pothole or flood patch on a road tile. It holds the next hop for 150 ms and keeps the buffered direction, so the cat always moves once. It never deals damage. |
 | Parked tricycle | Blocks two sidewalk tiles, forcing a detour. |
 | Barricade | Blocks one sidewalk tile for 4 to 8 s, then clears itself. |
 | Sparking wire | A sidewalk tile under a power pole scars the pavement and sparks for 0.3 s of every second. An arc crackles over the tile for the 0.18 s before each strike. Touching it while it sparks hits like a vehicle. The flash is drawn from the same clock the hit uses. Props and pickups never spawn on a spark tile. |

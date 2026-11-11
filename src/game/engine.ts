@@ -199,14 +199,19 @@ export class Engine {
   move(direction: Direction): void {
     if (this.phase !== 'playing') return;
     this.player.facing = direction;
-    if (this.player.hop < 1) {
-      this.queued = direction;
-      return;
-    }
-    this.step(direction);
+    this.queued = direction;
+    this.stepQueued();
   }
 
-  /** Live effect chips for the HUD, strongest remaining time first. */
+  /** Starts the buffered hop once the cat is grounded and clear of a pothole. */
+  private stepQueued(): void {
+    if (this.phase !== 'playing' || this.player.hop < 1 || this.stumble > 0) return;
+    const queued = this.queued;
+    this.queued = null;
+    if (queued) this.step(queued);
+  }
+
+  /** Live effect chips for the HUD: timed effects first, then held charges. */
   effectChips(): Array<{ kind: PowerKind; label: string; seconds: number }> {
     const chips: Array<{ kind: PowerKind; label: string; seconds: number }> = [];
     const push = (kind: PowerKind, seconds: number) => {
@@ -356,20 +361,17 @@ export class Engine {
   }
 
   private advanceHop(dt: number): void {
-    if (this.player.hop >= 1) return;
+    // A pothole never freezes a hop in flight; it only holds the next one.
+    if (this.player.hop < 1) {
+      // Slippers halve the hop time.
+      const duration = this.speedTimer > 0 ? HOP_TIME / 2 : HOP_TIME;
+      this.player.hop = Math.min(1, this.player.hop + dt / duration);
+      if (this.player.hop < 1) return;
+      this.collectAtCurrentTile();
+      this.checkLubak();
+    }
 
-    // Slippers halve the hop time; a pothole holds the cat on its takeoff tile.
-    const duration = this.speedTimer > 0 ? HOP_TIME / 2 : HOP_TIME;
-    if (this.stumble > 0) return;
-    this.player.hop = Math.min(1, this.player.hop + dt / duration);
-    if (this.player.hop < 1) return;
-
-    this.collectAtCurrentTile();
-    this.checkLubak();
-
-    const queued = this.queued;
-    this.queued = null;
-    if (queued && this.phase === 'playing') this.step(queued);
+    this.stepQueued();
   }
 
   private checkLubak(): void {
