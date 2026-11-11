@@ -179,6 +179,8 @@ export class Engine {
     this.invuln = 0;
     this.queued = null;
     this.deathTimer = 0;
+    this.shake = 0;
+    this.flash = 0;
     this.lastRunRecord = false;
     this.clearPowers();
     this.popups.length = 0;
