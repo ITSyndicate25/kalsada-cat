@@ -236,8 +236,10 @@ export class Engine {
 
   update(rawDt: number): void {
     const dt = Math.min(Math.max(rawDt, 0), 0.05);
-    this.time += dt;
+    // A paused game freezes its clock too, so the spark beat and the cat
+    // animation resume exactly where they stopped.
     if (this.phase === 'paused') return;
+    this.time += dt;
 
     if (this.phase === 'playing') {
       this.invuln = Math.max(0, this.invuln - dt);
